@@ -1,12 +1,21 @@
 "use client"
 
-import React, { useState, useMemo } from "react"
-import { Info, Search, User } from "lucide-react"
+import React, { useState, useEffect } from "react"
+import { Info, Search, User, Loader2 } from "lucide-react"
+import { Calendar } from "lucide-react"
 
-import { DUMMY_MEMBERS as SHARED_MEMBERS } from "@/lib/data/dummy-data"
 import { SettingsHeader, SettingTab, SettingsContentLayout } from "@/components/settings/SettingsHeader"
 import type { SidebarItem } from "@/components/settings/SettingsSidebar"
-import { Calendar } from "lucide-react"
+
+import { getSettingsMembers, SettingsMember } from "@/action/settings-members"
+import {
+    getOrgSettings,
+    upsertOrgSetting,
+    getAllMemberSettings,
+    upsertMemberSetting,
+    getCurrentUserOrganization
+} from "@/action/organization-settings"
+import { toast } from "sonner"
 
 type TrackingOption = "off" | "tracking-time" | "always"
 
@@ -17,22 +26,18 @@ interface MemberWithSetting {
     trackingSetting: TrackingOption
 }
 
+const SETTING_KEY = "track_locations"
+
 export default function MapPage() {
-    // Convert shared members to include tracking setting
-    const initialMembers: MemberWithSetting[] = useMemo(() =>
-        SHARED_MEMBERS.map(m => ({
-            id: m.id,
-            name: m.name,
-            avatar: m.avatar,
-            trackingSetting: "tracking-time" as TrackingOption
-        })), []
-    )
-
+    // const { toast } = useToast()
+    const [isLoading, setIsLoading] = useState(true)
+    const [organizationId, setOrganizationId] = useState<string | null>(null)
     const [globalSetting, setGlobalSetting] = useState<TrackingOption>("tracking-time")
-    const [members, setMembers] = useState<MemberWithSetting[]>(initialMembers)
+    const [members, setMembers] = useState<MemberWithSetting[]>([])
+    const [page, setPage] = useState(1);
+    const [limit] = useState(50);
+    const [totalMembers, setTotalMembers] = useState(0);
     const [searchQuery, setSearchQuery] = useState("")
-
-
 
     const trackingOptions: { value: TrackingOption; label: string }[] = [
         { value: "off", label: "Off" },
@@ -40,24 +45,93 @@ export default function MapPage() {
         { value: "always", label: "Always" },
     ]
 
-    const handleGlobalChange = (setting: TrackingOption) => {
+    useEffect(() => {
+        const loadData = async () => {
+            setIsLoading(true)
+            try {
+                // 1. Get Organization
+                const orgRes = await getCurrentUserOrganization()
+                if (!orgRes.success || !orgRes.data?.id) {
+                toast.error("Failed to load organization data")
+                    setIsLoading(false)
+                    return
+                }
+                const orgId = String(orgRes.data.id)
+                setOrganizationId(orgId)
+
+                // 2. Load Global Settings
+                const globalRes = await getOrgSettings(orgId)
+                let currentGlobalSetting: TrackingOption = "tracking-time"
+                if (globalRes.success && globalRes.data) {
+                    currentGlobalSetting = (globalRes.data[SETTING_KEY] as TrackingOption) || "tracking-time"
+                    setGlobalSetting(currentGlobalSetting)
+                }
+
+                // 3. Load Members (paginated)
+                const membersRes = await getSettingsMembers(orgId, { page, limit }, searchQuery)
+                
+                // 4. Load Individual Member Settings
+                const settingsRes = await getAllMemberSettings(orgId)
+                const allSettings = settingsRes.data || {}
+
+                if (membersRes.success && membersRes.data) {
+                    const membersWithSettings: MemberWithSetting[] = membersRes.data.map((m: SettingsMember) => ({
+                        id: m.id,
+                        name: m.name,
+                        avatar: m.avatar,
+                        trackingSetting: (allSettings[Number(m.id)]?.[SETTING_KEY] as TrackingOption) ?? 
+                                         currentGlobalSetting
+                    }))
+                    setMembers(membersWithSettings)
+                    setTotalMembers(membersRes.total || 0)
+                } else {
+                    setMembers([])
+                    setTotalMembers(0)
+                }
+            } catch (error) {
+                console.error("Error loading settings:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        loadData()
+    }, [page, searchQuery, organizationId])
+
+    const handleGlobalChange = async (setting: TrackingOption) => {
+        if (!organizationId) return
+
+        const previousState = globalSetting
         setGlobalSetting(setting)
-        setMembers(prev =>
-            prev.map(member => ({ ...member, trackingSetting: setting }))
-        )
+        
+        const res = await upsertOrgSetting(organizationId, { [SETTING_KEY]: setting })
+        if (!res.success) {
+            setGlobalSetting(previousState)
+            toast.error("Failed to save global setting")
+        } else {
+            toast.success(`Global tracking set to ${setting}`)
+        }
     }
 
-    const handleMemberChange = (id: string, setting: TrackingOption) => {
+    const handleMemberChange = async (id: string, setting: TrackingOption) => {
+        const previousMembers = [...members]
         setMembers(prev =>
             prev.map(member =>
                 member.id === id ? { ...member, trackingSetting: setting } : member
             )
         )
+
+        const res = await upsertMemberSetting(id, { [SETTING_KEY]: setting })
+        if (!res.success) {
+            setMembers(previousMembers)
+            toast.error("Failed to save member setting")
+        }
     }
 
-    const filteredMembers = members.filter(member =>
-        member.name.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+        setPage(1)
+    }
 
     const tabs: SettingTab[] = [
         { label: "CALENDAR", href: "/settings/Calender", active: false },
@@ -113,10 +187,11 @@ export default function MapPage() {
                                 <button
                                     key={option.value}
                                     onClick={() => handleGlobalChange(option.value)}
+                                    disabled={isLoading}
                                     className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${globalSetting === option.value
                                         ? "bg-white text-gray-900 shadow-sm"
                                         : "text-gray-500 hover:text-gray-700"
-                                        }`}
+                                        } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                                 >
                                     {option.label}
                                 </button>
@@ -135,7 +210,7 @@ export default function MapPage() {
                                     type="text"
                                     placeholder="Search members"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={handleSearch}
                                     className="pl-10 pr-4 py-2 w-full sm:w-64 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent text-sm"
                                 />
                             </div>
@@ -149,38 +224,72 @@ export default function MapPage() {
                             </div>
 
                             {/* Table Body */}
-                            <div className="divide-y divide-gray-200">
-                                {filteredMembers.map((member) => (
-                                    <div key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-b border-gray-100 last:border-0">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                                <User className="w-4 h-4 text-gray-500" />
-                                            </div>
-                                            <span className="text-sm text-gray-900">{member.name}</span>
-                                        </div>
-                                        {/* Member Toggle Buttons - Pill style */}
-                                        <div className="inline-flex flex-wrap rounded-full bg-gray-100 p-0.5 w-fit">
-                                            {trackingOptions.map((option) => (
-                                                <button
-                                                    key={option.value}
-                                                    onClick={() => handleMemberChange(member.id, option.value)}
-                                                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${member.trackingSetting === option.value
-                                                        ? "bg-white text-gray-900 shadow-sm"
-                                                        : "text-gray-500 hover:text-gray-700"
-                                                        }`}
-                                                >
-                                                    {option.label}
-                                                </button>
-                                            ))}
-                                        </div>
+                            <div className="divide-y divide-gray-200 min-h-[200px] relative">
+                                {isLoading ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
+                                        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                                     </div>
-                                ))}
+                                ) : members.length > 0 ? (
+                                    members.map((member) => (
+                                        <div key={member.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-4 border-b border-gray-100 last:border-0">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                                                    {member.avatar ? (
+                                                        <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <User className="w-4 h-4 text-gray-500" />
+                                                    )}
+                                                </div>
+                                                <span className="text-sm text-gray-900">{member.name}</span>
+                                            </div>
+                                            {/* Member Toggle Buttons - Pill style */}
+                                            <div className="inline-flex flex-wrap rounded-full bg-gray-100 p-0.5 w-fit">
+                                                {trackingOptions.map((option) => (
+                                                    <button
+                                                        key={option.value}
+                                                        onClick={() => handleMemberChange(member.id, option.value)}
+                                                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all ${member.trackingSetting === option.value
+                                                            ? "bg-white text-gray-900 shadow-sm"
+                                                            : "text-gray-500 hover:text-gray-700"
+                                                            }`}
+                                                    >
+                                                        {option.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="py-10 text-center text-sm text-gray-500">
+                                        No members found.
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Footer */}
-                            <div className="py-3 text-sm text-gray-500">
-                                Showing {filteredMembers.length} of {members.length} members
-                            </div>
+                            {/* Footer / Pagination */}
+                            {!isLoading && (
+                                <div className="py-4 flex items-center justify-between border-t border-gray-100 mt-4">
+                                    <div className="text-sm text-gray-500">
+                                        Showing {Math.min((page - 1) * limit + 1, totalMembers)} to {Math.min(page * limit, totalMembers)} of {totalMembers} members
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                                            disabled={page === 1 || isLoading}
+                                            className="px-3 py-1 text-xs font-medium border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button
+                                            onClick={() => setPage(p => p + 1)}
+                                            disabled={page * limit >= totalMembers || isLoading}
+                                            className="px-3 py-1 text-xs font-medium border border-gray-300 rounded-md disabled:opacity-50 hover:bg-gray-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -189,3 +298,4 @@ export default function MapPage() {
         </div>
     )
 }
+

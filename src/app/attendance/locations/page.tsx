@@ -67,13 +67,16 @@ export default function LocationsPage() {
   }, [search]);
 
   // Derived Data
-  const filteredDevices = devices.filter((device) =>
-    device.device_name.toLowerCase().includes(search.toLowerCase()) ||
+  const filteredDevices = devices.filter((device) => {
+    // Exclude Geofences from this general list
+    if (device.device_types?.code === 'GEOFENCE') return false;
+    
+    return device.device_name.toLowerCase().includes(search.toLowerCase()) ||
     device.location?.toLowerCase().includes(search.toLowerCase()) ||
     device.device_code.toLowerCase().includes(search.toLowerCase())
-  );
+  });
 
-  const activeCount = devices.filter(d => d.is_active).length;
+  const activeCount = filteredDevices.filter(d => d.is_active).length;
 
   // Pagination Logic
   const totalRows = filteredDevices.length;

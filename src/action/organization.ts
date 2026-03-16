@@ -190,6 +190,9 @@ export const getAllOrganization = async () => {
 // This function returns only the organization that the current user belongs to
 export const getUserOrganization = async () => {
   const supabase = await createClient();
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  const orgIdFromCookie = cookieStore.get('org_id')?.value;
 
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -198,21 +201,43 @@ export const getUserOrganization = async () => {
   }
 
   // Get user's organization membership
-  const { data: member, error: memberError } = await supabase
+  let query = supabase
     .from("organization_members")
     .select("organization_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    .eq("user_id", user.id);
 
-  if (memberError || !member) {
+  // If we have an org_id from cookie, try to get that specific membership
+  if (orgIdFromCookie) {
+    query = query.eq("organization_id", orgIdFromCookie);
+  }
+
+  const { data: members, error: memberError } = await query.limit(1);
+
+  if (memberError || !members || members.length === 0) {
+    // If cookie failed or not present, fallback to ANY active membership
+    if (orgIdFromCookie) {
+      const fallbackQuery = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .limit(1);
+        
+      if (fallbackQuery.data && fallbackQuery.data.length > 0) {
+        return fetchOrganization(supabase, fallbackQuery.data[0].organization_id);
+      }
+    }
     return { success: false, message: "User not in any organization", data: null };
   }
 
-  // Fetch ONLY the user's organization
+  return fetchOrganization(supabase, members[0].organization_id);
+};
+
+// Helper to fetch organization by ID
+async function fetchOrganization(supabase: any, orgId: any) {
   const { data, error } = await supabase
     .from("organizations")
     .select("*")
-    .eq("id", member.organization_id)
+    .eq("id", orgId)
     .single();
 
   if (error) {
@@ -220,7 +245,7 @@ export const getUserOrganization = async () => {
   }
 
   return { success: true, data: data as IOrganization };
-};
+}
 
 export const uploadLogo = async (
   file: File,

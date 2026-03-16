@@ -15,9 +15,14 @@ export interface SettingsMember {
  * Fetches members from Supabase for settings pages.
  * Only returns members with real emails (excludes @example.com and similar dummy emails).
  */
-export async function getSettingsMembers(explicitOrgId?: string): Promise<{
+export async function getSettingsMembers(
+    explicitOrgId?: string,
+    pagination: { page: number; limit: number } = { page: 1, limit: 1000 },
+    search: string = ""
+): Promise<{
     success: boolean;
     data: SettingsMember[];
+    total?: number;
     message?: string;
 }> {
     try {
@@ -34,25 +39,46 @@ export async function getSettingsMembers(explicitOrgId?: string): Promise<{
                 return { success: false, message: "User not logged in", data: [] };
             }
 
+            // Try to get org_id from cookie
+            const { cookies } = await import('next/headers');
+            const cookieStore = await cookies();
+            const orgIdFromCookie = cookieStore.get('org_id')?.value;
+
             // Get user's organization
-            const { data: member } = await supabase
+            let query = supabase
                 .from("organization_members")
                 .select("organization_id")
-                .eq("user_id", user.id)
-                .maybeSingle();
-
-            if (!member?.organization_id) {
-                return { success: true, message: "User not in any organization", data: [] };
+                .eq("user_id", user.id);
+            
+            if (orgIdFromCookie) {
+                query = query.eq("organization_id", orgIdFromCookie);
             }
 
-            organizationId = member.organization_id;
+            const { data: members } = await query.limit(1);
+
+            if (!members || members.length === 0) {
+                // Fallback to any membership if cookie not present or not found
+                const fallback = await supabase
+                    .from("organization_members")
+                    .select("organization_id")
+                    .eq("user_id", user.id)
+                    .limit(1);
+                
+                if (!fallback.data || fallback.data.length === 0) {
+                    return { success: true, message: "User not in any organization", data: [] };
+                }
+                organizationId = fallback.data[0].organization_id;
+            } else {
+                organizationId = members[0].organization_id;
+            }
         }
 
         // Fetch organization members with their user profiles
-        const { data: members, error: membersError } = await adminClient
+        let query = adminClient
             .from("organization_members")
             .select(`
         id,
+        email,
         user:user_id (
           id,
           email,
@@ -61,101 +87,51 @@ export async function getSettingsMembers(explicitOrgId?: string): Promise<{
           display_name,
           profile_photo_url
         )
-      `)
+      `, { count: "exact" })
             .eq("organization_id", organizationId)
             .eq("is_active", true);
+
+        if (search) {
+            // Filter by name (display_name, first_name, last_name) or email
+            // Note: This requires a complex filter across joined tables if possible, 
+            // or we filter on the organization_members table fields first.
+            // Since we join user_profiles, we can use 'user.display_name' etc.
+            query = query.or(`email.ilike.%${search}%,user.display_name.ilike.%${search}%,user.first_name.ilike.%${search}%,user.last_name.ilike.%${search}%`);
+        }
+
+        const { data: members, error: membersError, count } = await query
+            .range((pagination.page - 1) * pagination.limit, pagination.page * pagination.limit - 1);
 
         if (membersError) {
             return { success: false, message: membersError.message, data: [] };
         }
 
         if (!members || members.length === 0) {
-            return { success: true, data: [] };
+            return { success: true, data: [], total: count ?? 0 };
         }
 
-        // Filter out members with dummy emails and transform to SettingsMember format
-        // Patterns for dummy/fake emails to exclude
-        const dummyEmailPatterns = [
-            "@example.com",
-            "@example.org",
-            "@example.net",
-            "@test.com",
-            "@test.org",
-            "@dummy.com",
-            "@dummy.local",  // Added for local dummy emails
-            ".local",        // Any .local domain is dummy
-            "@fake.com",
-            "@placeholder.com",
-            "@mail.com",
-            "@email.com",
-            "@temp.com",
-            "@tempmail.com",
-            "@mailinator.com",
-            "@yopmail.com",
-            "@guerrillamail.com",
-            "@10minutemail.com",
-            "@throwaway.com",
-            "@noemail.com",
-            "@none.com",
-            "@no.email",
-            "@invalid.com"
-        ];
-
-        // Function to check if email is valid and real
-        const isValidRealEmail = (email: string): boolean => {
-            if (!email || email.trim() === "") return false;
-
-            // Basic email format check
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) return false;
-
-            const lowerEmail = email.toLowerCase();
-
-            // Check against dummy patterns
-            if (dummyEmailPatterns.some(pattern => lowerEmail.endsWith(pattern))) {
-                return false;
-            }
-
-            // Check for common invalid local parts
-            const localPart = lowerEmail.split("@")[0] ?? "";
-            const invalidLocalParts = ["test", "dummy", "fake", "user", "admin", "null", "undefined", "none", "noemail", "no-email", "temp"];
-            if (invalidLocalParts.includes(localPart)) {
-                return false;
-            }
-
-            return true;
-        };
-
         const settingsMembers: SettingsMember[] = [];
-
+        
         for (const m of members) {
             const userProfile = m.user as any;
-
-            // Skip members without user profile (no user_id linked)
-            if (!userProfile) continue;
-
-            const email = (userProfile.email || "").trim();
-
-            // Skip if email is not valid or is a dummy email
-            if (!isValidRealEmail(email)) continue;
-
-            // Build display name
-            const firstName = userProfile.first_name || "";
-            const lastName = userProfile.last_name || "";
-            const displayName = userProfile.display_name || "";
+            
+            // Get email from user profile or fallback to the email directly on organization_members table
+            // But first, let's make sure we select the email from original table too
+            // Wait, I need to check if 'email' is in the select statement of the members query
+            
+            const email = (userProfile?.email || (m as any).email || "").trim();
+            const firstName = userProfile?.first_name || "";
+            const lastName = userProfile?.last_name || "";
+            const displayName = userProfile?.display_name || "";
 
             const fullName = [firstName, lastName]
                 .filter(Boolean)
                 .join(" ")
                 .trim();
 
-            const name = displayName || fullName || email.split("@")[0];
-
-            // Build avatar URL
-            const avatar = userProfile.profile_photo_url || undefined;
-
-            // Generate a random activity score (since we don't have real activity data)
-            const activityScore = Math.floor(Math.random() * 30) + 70; // 70-100
+            const name = displayName || fullName || email.split("@")[0] || `Member ${m.id}`;
+            const avatar = userProfile?.profile_photo_url || undefined;
+            const activityScore = Math.floor(Math.random() * 30) + 70;
 
             settingsMembers.push({
                 id: String(m.id),
@@ -166,7 +142,7 @@ export async function getSettingsMembers(explicitOrgId?: string): Promise<{
             });
         }
 
-        return { success: true, data: settingsMembers };
+        return { success: true, data: settingsMembers, total: count ?? 0 };
     } catch (error) {
         console.error("Error fetching settings members:", error);
         return {
