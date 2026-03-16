@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch"
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 
 interface AddHolidayDialogProps {
     open: boolean

@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { MemberOption, BatchEntry } from "@/types/attendance"
 import type { UseFormReturn } from "react-hook-form"

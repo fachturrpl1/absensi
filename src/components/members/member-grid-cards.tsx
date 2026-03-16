@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SearchBar } from '@/components/customs/search-bar';
+import { SearchBar } from '@/components/toolbar/search-bar';
 import {
   Select,
   SelectContent,

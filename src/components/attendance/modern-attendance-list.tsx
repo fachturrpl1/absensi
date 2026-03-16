@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/profile&image/avatar';
 import {

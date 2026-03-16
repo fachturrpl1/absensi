@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-table"
 import type { RowSelectionState, OnChangeFn } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import {
   Table,
   TableBody,

@@ -22,7 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import {
   Select,
   SelectContent,

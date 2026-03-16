@@ -1,7 +1,7 @@
 "use client"
 import { useState, useMemo } from "react"
 import { ChevronRight } from "lucide-react"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import type { Member, Team } from "@/lib/data/dummy-data"
 import type { SelectedFilter } from "@/components/insights/types"
 

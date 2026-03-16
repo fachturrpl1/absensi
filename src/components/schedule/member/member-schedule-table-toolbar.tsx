@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 
 interface MemberScheduleTableToolbarProps {
     searchQuery: string

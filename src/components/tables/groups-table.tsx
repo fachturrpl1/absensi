@@ -4,7 +4,7 @@ import React from "react"
 import { IGroup } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Trash, Pencil, Filter, Columns3Cog } from "lucide-react"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import {
   Select,
   SelectContent,

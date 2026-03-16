@@ -3,7 +3,7 @@
 import React from "react"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import {
     Select,
     SelectContent,

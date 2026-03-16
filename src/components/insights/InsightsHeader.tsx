@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Menu, ChevronDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { SearchBar } from "@/components/customs/search-bar"
+import { SearchBar } from "@/components/toolbar/search-bar"
 import type { DateRange, FilterTab, PickerItem, SelectedFilter } from "./types"
 
 interface Props {
