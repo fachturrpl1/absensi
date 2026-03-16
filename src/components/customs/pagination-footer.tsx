@@ -1,9 +1,111 @@
 "use client"
 
-import React from "react"
-import { Button } from "@/components/ui/button"
+import * as React from "react"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { buttonVariants } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+
+const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
+  <nav
+    role="navigation"
+    aria-label="pagination"
+    className={cn("mx-auto flex w-full justify-center", className)}
+    {...props}
+  />
+)
+Pagination.displayName = "Pagination"
+
+const PaginationContent = React.forwardRef<
+  HTMLUListElement,
+  React.ComponentProps<"ul">
+>(({ className, ...props }, ref) => (
+  <ul
+    ref={ref}
+    className={cn("flex flex-row items-center gap-1", className)}
+    {...props}
+  />
+))
+PaginationContent.displayName = "PaginationContent"
+
+const PaginationItem = React.forwardRef<
+  HTMLLIElement,
+  React.ComponentProps<"li">
+>(({ className, ...props }, ref) => (
+  <li ref={ref} className={cn("inline-flex", className)} {...props} />
+))
+PaginationItem.displayName = "PaginationItem"
+
+type PaginationLinkProps = {
+  isActive?: boolean
+  isDisabled?: boolean
+  size?: "default" | "sm" | "lg" | "icon"
+} & React.ComponentProps<"button">
+
+const PaginationLink = ({
+  className,
+  isActive,
+  isDisabled,
+  size = "icon",
+  ...props
+}: PaginationLinkProps) => (
+  <button
+    aria-current={isActive ? "page" : undefined}
+    disabled={isDisabled}
+    className={cn(
+      buttonVariants({
+        variant: isActive ? "default" : "outline",
+        size: size === "icon" ? "sm" : size,
+      }),
+      "h-9 w-9 p-0 text-sm font-medium transition-all duration-200",
+      "flex items-center justify-center shrink-0",
+      isActive && "pointer-events-none",
+      isDisabled && "pointer-events-none opacity-50",
+      className
+    )}
+    {...props}
+  />
+)
+PaginationLink.displayName = "PaginationLink"
+
+const PaginationPrevious = ({
+  className,
+  ...props
+}: React.ComponentProps<typeof PaginationLink>) => (
+  <PaginationLink aria-label="Go to previous page" size="icon" className={className} {...props}>
+    <ChevronLeft className="h-4 w-4" />
+    <span className="sr-only">Previous</span>
+  </PaginationLink>
+)
+PaginationPrevious.displayName = "PaginationPrevious"
+
+const PaginationNext = ({
+  className,
+  ...props
+}: React.ComponentProps<typeof PaginationLink>) => (
+  <PaginationLink aria-label="Go to next page" size="icon" className={className} {...props}>
+    <ChevronRight className="h-4 w-4" />
+    <span className="sr-only">Next</span>
+  </PaginationLink>
+)
+PaginationNext.displayName = "PaginationNext"
+
+const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<"span">) => (
+  <span
+    aria-hidden
+    className={cn(
+      "flex h-9 w-9 items-center justify-center rounded-md",
+      "border border-border bg-background text-muted-foreground",
+      className
+    )}
+    {...props}
+  >
+    <MoreHorizontal className="h-4 w-4" />
+    <span className="sr-only">More pages</span>
+  </span>
+)
+PaginationEllipsis.displayName = "PaginationEllipsis"
 
 export type PaginationFooterProps = {
   page: number
@@ -19,6 +121,34 @@ export type PaginationFooterProps = {
   className?: string
 }
 
+function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
+  const delta = 1
+  const range: number[] = []
+
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+      range.push(i)
+    }
+  }
+
+  const rangeWithDots: (number | "...")[] = []
+  let prev: number | undefined
+
+  for (const i of range) {
+    if (prev !== undefined) {
+      if (i - prev === 2) {
+        rangeWithDots.push(prev + 1)
+      } else if (i - prev !== 1) {
+        rangeWithDots.push("...")
+      }
+    }
+    rangeWithDots.push(i)
+    prev = i
+  }
+
+  return rangeWithDots
+}
+
 export function PaginationFooter({
   page,
   totalPages,
@@ -30,107 +160,89 @@ export function PaginationFooter({
   pageSize,
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50],
-  className = "",
 }: PaginationFooterProps) {
   const safeTotalPages = Math.max(1, totalPages || 1)
-
-  const getPageNumbers = () => {
-    const delta = 1
-    const range = []
-    const rangeWithDots = []
-    let l
-
-    for (let i = 1; i <= safeTotalPages; i++) {
-      if (i === 1 || i === safeTotalPages || (i >= page - delta && i <= page + delta)) {
-        range.push(i)
-      }
-    }
-
-    for (const i of range) {
-      if (l) {
-        if (i - l === 2) {
-          rangeWithDots.push(l + 1)
-        } else if (i - l !== 1) {
-          rangeWithDots.push('...')
-        }
-      }
-      rangeWithDots.push(i)
-      l = i
-    }
-
-    return rangeWithDots
-  }
+  const pages = getPageNumbers(page, safeTotalPages)
 
   return (
-    <div className={cn("mt-4 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 py-4", className)}>
-      {/* Left Side: Info & Page Size */}
-      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+    <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-between gap-4">
+      <div className={cn(
+        "flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4", 
+        "text-sm text-muted-foreground w-full lg:w-auto"
+      )}>
         <span>
-          Showing <span className="font-medium text-gray-900 dark:text-gray-100">{from}-{to}</span> of <span className="font-medium text-gray-900 dark:text-gray-100">{total}</span> data
+          Showing{" "}
+          <span className="font-medium text-foreground">{from}–{to}</span>
+          {" "}of{" "}
+          <span className="font-medium text-foreground">{total.toLocaleString()}</span>
+          {" "}data
         </span>
         <div className="flex items-center gap-2">
-          <span>Rows:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            disabled={isLoading}
-            className="h-8 px-2 rounded-md text-sm"
+          <span className="text-xs whitespace-nowrap">Rows per page:</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(v) => onPageSizeChange(Number(v))}
           >
-            {pageSizeOptions.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-[70px] text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pageSizeOptions.map((size) => (
+                <SelectItem key={size} value={String(size)}>{size}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Right Side: Pagination */}
-      <div className="flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 p-0"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1 || isLoading}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
+      {/* Kanan: page buttons — pakai primitives di atas */}
+      <Pagination className="w-auto mx-0">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => onPageChange(page - 1)}
+              isDisabled={page <= 1 || isLoading}
+            />
+          </PaginationItem>
 
-        {getPageNumbers().map((pageNum, idx) => (
-          pageNum === '...' ? (
-            <span key={`dots-${idx}`} className="px-2 text-gray-400 dark:text-gray-600">
-              <MoreHorizontal className="h-4 w-4" />
-            </span>
-          ) : (
-            <Button
-              key={pageNum}
-              variant={page === pageNum ? "default" : "outline"}
-              size="icon"
-              className={cn(
-                "h-8 w-8 p-0",
-                page === pageNum
-                  ? "bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90"
-                  : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 dark:border-gray-800 dark:hover:bg-gray-800"
-              )}
-              onClick={() => onPageChange(Number(pageNum))}
-              disabled={isLoading}
-            >
-              {pageNum}
-            </Button>
-          )
-        ))}
+          {pages.map((p, idx) =>
+            p === "..." ? (
+              <PaginationItem key={`dots-${idx}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  isActive={page === p}
+                  isDisabled={isLoading}
+                  onClick={() => onPageChange(p)}
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
 
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-8 w-8 p-0 dark:border-gray-800 dark:hover:bg-gray-800"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= safeTotalPages || isLoading}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
+          <PaginationItem>
+            <PaginationNext
+              onClick={() => onPageChange(page + 1)}
+              isDisabled={page >= safeTotalPages || isLoading}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   )
+}
+
+// ─── Named exports untuk penggunaan standalone ────────────────────────────────
+
+export {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 }
