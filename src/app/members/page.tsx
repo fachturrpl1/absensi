@@ -695,7 +695,8 @@ export default function MembersPage() {
                 className="h-11 px-4 min-w-[100px]"
                 onClick={() => setInviteDialogOpen(true)}
               >
-                Invite <Plus className="ml-2 h-4 w-4" />
+                <Plus className="h-4 w-4" />
+                Invite 
               </Button>
             </div>
           </div>
@@ -761,17 +762,19 @@ export default function MembersPage() {
                 placeholder="Search invites"
                 value={inviteSearchQuery}
                 onChange={(e) => setInviteSearchQuery(e.target.value)}
-                className="pl-10 h-11 bg-white w-full rounded-full border-gray-200 shadow-sm"
+                className="h-11 pl-10 bg-background"
               />
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap gap-2 justify-start xl:justify-end items-center">
 
               <Button
-                className="bg-black hover:bg-gray-800 text-white font-medium px-6 h-10 shadow-sm"
+                size="sm"
+                className="h-11 px-4 min-w-[100px]"
                 onClick={() => setInviteDialogOpen(true)}
               >
-                Invite member
+                <Plus className="h-4 w-4" />
+                Invite
               </Button>
             </div>
           </div>

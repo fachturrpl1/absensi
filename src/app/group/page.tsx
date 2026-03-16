@@ -149,15 +149,38 @@ export default function GroupsPage() {
     {
       accessorKey: "code",
       header: "Code",
+      cell: ({ row }) => (
+        <Link
+          href={`/group/${row.original.name}/members`}
+          className="hover:cursor-pointer"
+        >
+          {row.original.code}
+        </Link>
+      ),
     },
     {
       accessorKey: "name",
       header: "Name",
+      cell: ({ row }) => (
+        <Link
+          href={`/group/${row.original.name}/members`}
+          className="hover:cursor-pointer"
+        >
+          {row.original.name}
+        </Link>
+      ),
     },
     {
       accessorKey: "description",
       header: "Description",
-      cell: ({ row }) => row.original.description || "-",
+      cell: ({ row }) => (
+        <Link
+          href={`/group/${row.original.name}/members`}
+          className="hover:cursor-pointer"
+        >
+          {row.original.description}
+        </Link>
+      ),
     },
     {
       accessorKey: "is_active",
@@ -211,9 +234,12 @@ export default function GroupsPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-8 w-8 hover:cursor-pointer"
+                  title="Move member(s)"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight
+                    className="h-4 w-4"
+                  />
                 </Button>
               </Link>
               <AlertDialogContent>
@@ -391,7 +417,7 @@ export default function GroupsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 w-full">
       <div className="w-full">
-        <div className="w-full bg-card rounded-lg shadow-sm border">
+        <div>
 
           <div className="p-4 md:p-6 space-y-4 overflow-x-auto">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
