@@ -26,7 +26,7 @@ import {
 import { UserAvatar } from "@/components/profile&image/user-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { cn } from "@/lib/utils"
 import { formatLocalTime } from "@/utils/timezone"
 
@@ -725,72 +725,72 @@ function ModernAttendanceListCloned() {
 
       {/* Table */}
       <div>
-            <div className="overflow-x-auto w-full">
-              <table className="w-full min-w-[880px]">
-                <thead className="sticky top-0 z-10 bg-muted/50">
-                  <tr>
-                    <th className="p-3 text-left">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size === data.items.length && data.items.length > 0}
-                        onChange={() => selectAll()}
-                        className="rounded"
-                      />
-                    </th>
-                    <th className="p-3 text-left text-xs font-medium">Member</th>
-                    <th className="p-3 text-left text-xs font-medium">Group</th>
-                    <th className="p-3 text-left text-xs font-medium">Check In</th>
-                    <th className="p-3 text-left text-xs font-medium">Check Out</th>
-                    <th className="p-3 text-left text-xs font-medium">Break In</th>
-                    <th className="p-3 text-left text-xs font-medium">Break Out</th>
-                    <th className="p-3 text-left text-xs font-medium">Work Hours</th>
-                    <th className="p-3 text-left text-xs font-medium">Status</th>
-                    {SHOW_LOCATION && <th className="p-3 text-left text-xs font-medium">Location</th>}
-                    <th className="p-3 text-left text-xs font-medium">Actions</th>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[880px]">
+            <thead className="sticky top-0 z-10 bg-muted/50">
+              <tr>
+                <th className="p-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === data.items.length && data.items.length > 0}
+                    onChange={() => selectAll()}
+                    className="rounded"
+                  />
+                </th>
+                <th className="p-3 text-left text-xs font-medium">Member</th>
+                <th className="p-3 text-left text-xs font-medium">Group</th>
+                <th className="p-3 text-left text-xs font-medium">Check In</th>
+                <th className="p-3 text-left text-xs font-medium">Check Out</th>
+                <th className="p-3 text-left text-xs font-medium">Break In</th>
+                <th className="p-3 text-left text-xs font-medium">Break Out</th>
+                <th className="p-3 text-left text-xs font-medium">Work Hours</th>
+                <th className="p-3 text-left text-xs font-medium">Status</th>
+                {SHOW_LOCATION && <th className="p-3 text-left text-xs font-medium">Location</th>}
+                <th className="p-3 text-left text-xs font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
+              {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr key={`skel-${i}`} className="border-b">
+                    <td className="p-3"><Skeleton className="h-3 w-3 rounded" /></td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-40" />
+                          <Skeleton className="h-2.5 w-24" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3"><Skeleton className="h-3 w-24" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-16" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-16" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-20" /></td>
+                    <td className="p-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-24" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-24" /></td>
+                    {SHOW_LOCATION && <td className="p-3"><Skeleton className="h-3 w-28" /></td>}
+                    <td className="p-3">
+                      <div className="flex items-center gap-1">
+                        <Skeleton className="h-8 w-8 rounded" />
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-muted/50">
-                  {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={`skel-${i}`} className="border-b">
-                        <td className="p-3"><Skeleton className="h-3 w-3 rounded" /></td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-8 w-8 rounded-full" />
-                            <div className="space-y-2">
-                              <Skeleton className="h-3 w-40" />
-                              <Skeleton className="h-2.5 w-24" />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3"><Skeleton className="h-3 w-24" /></td>
-                        <td className="p-3"><Skeleton className="h-3 w-16" /></td>
-                        <td className="p-3"><Skeleton className="h-3 w-16" /></td>
-                        <td className="p-3"><Skeleton className="h-3 w-20" /></td>
-                        <td className="p-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                        <td className="p-3"><Skeleton className="h-3 w-24" /></td>
-                        <td className="p-3"><Skeleton className="h-3 w-24" /></td>
-                        {SHOW_LOCATION && <td className="p-3"><Skeleton className="h-3 w-28" /></td>}
-                        <td className="p-3">
-                          <div className="flex items-center gap-1">
-                            <Skeleton className="h-8 w-8 rounded" />
-                            <Skeleton className="h-8 w-8 rounded" />
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : data.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={SHOW_LOCATION ? 11 : 10} className="text-center py-6 text-muted-foreground text-sm">
-                        No attendance records found
-                      </td>
-                    </tr>
-                  ) : (
-                    visibleRows
-                  )}
-                </tbody>
-              </table>
-            </div>
+                ))
+              ) : data.items.length === 0 ? (
+                <tr>
+                  <td colSpan={SHOW_LOCATION ? 11 : 10} className="text-center py-6 text-muted-foreground text-sm">
+                    No attendance records found
+                  </td>
+                </tr>
+              ) : (
+                visibleRows
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination */}
         {!loading && data.total > queryParams.limit && (

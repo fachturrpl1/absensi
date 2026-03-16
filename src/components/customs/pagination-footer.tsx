@@ -74,7 +74,7 @@ export function PaginationFooter({
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
             disabled={isLoading}
-            className="h-8 px-2 rounded-md border border-gray-300 dark:border-gray-800 bg-white dark:bg-gray-950 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-100"
+            className="h-8 px-2 rounded-md text-sm"
           >
             {pageSizeOptions.map((size) => (
               <option key={size} value={size}>
@@ -90,7 +90,7 @@ export function PaginationFooter({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8 p-0 dark:border-gray-800 dark:hover:bg-gray-800"
+          className="h-8 w-8 p-0"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1 || isLoading}
         >

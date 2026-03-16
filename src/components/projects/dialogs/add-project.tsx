@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Trash2, Loader2 } from "lucide-react"
-import type { NewProjectForm, MemberLimit, IClient, IGroup, ISimpleMember } from "@/interface"
+import type { NewProjectForm, MemberLimit, IClient, ITeams, ISimpleMember } from "@/interface"
 
 type AddProjectDialogProps = {
     open: boolean
@@ -21,11 +21,11 @@ type AddProjectDialogProps = {
     onSave: () => void
     members?: ISimpleMember[]
     clients?: IClient[]
-    groups?: IGroup[]
+    teams?: ITeams[]
 }
 
 export default function AddProjectDialog(props: AddProjectDialogProps) {
-    const { open, onOpenChange, form, onFormChange, onSave, members = [], clients = [], groups = [] } = props
+    const { open, onOpenChange, form, onFormChange, onSave, members = [], clients = [], teams = [] } = props
 
     // ── Track if dialog has been opened at least once (lazy init) ─────────────
     const hasOpened = useRef(false)
@@ -110,14 +110,14 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                     </p>
                                 ) : (
                                     <Select
-                                        value={form.clientId ?? ""}
-                                        onValueChange={(v) => onFormChange(s => ({ ...s, clientId: v || null }))}
+                                        value={form.clientId ?? "none"}
+                                        onValueChange={(v) => onFormChange(s => ({ ...s, clientId: v === "none" ? null : v }))}
                                     >
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select a client" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">— No client —</SelectItem>
+                                            <SelectItem value="none">— No client —</SelectItem>
                                             {clients.map((client) => (
                                                 <SelectItem key={client.id} value={String(client.id)}>
                                                     {client.name}
@@ -140,10 +140,10 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                         <div className="text-xs font-semibold text-muted-foreground">{labels[i]}</div>
                                         <div className="text-xs text-muted-foreground">{descs[i]}</div>
                                         <Select
-                                            value={form.members?.[i] ?? ""}
+                                            value={form.members?.[i] || "none"}
                                             onValueChange={(v) => {
                                                 const newMembers = [...(form.members || [])]
-                                                newMembers[i] = v
+                                                newMembers[i] = v === "none" ? "" : v
                                                 onFormChange(prev => ({ ...prev, members: newMembers }))
                                             }}
                                         >
@@ -151,6 +151,7 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                                 <SelectValue placeholder={placeholders[i]} />
                                             </SelectTrigger>
                                             <SelectContent position="popper" className="max-h-60 overflow-y-auto">
+                                                <SelectItem value="none">— None —</SelectItem>
                                                 {members.map(m => {
                                                     const otherIndices = [0, 1, 2].filter(x => x !== i)
                                                     const isAssigned = otherIndices.some(x => form.members?.[x] === m.id)
@@ -410,16 +411,16 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                 <button
                                     type="button"
                                     className="text-sm text-foreground underline underline-offset-4 hover:opacity-70 transition-opacity bg-transparent border-0 cursor-pointer"
-                                    onClick={() => onFormChange(s => ({ ...s, teams: groups.map(t => String(t.id)) }))}
+                                    onClick={() => onFormChange(s => ({ ...s, teams: teams.map(t => String(t.id)) }))}
                                 >
                                     Select all
                                 </button>
                             </div>
                             <ScrollArea className="h-[200px] w-full rounded-md border p-4">
                                 <div className="space-y-4">
-                                    {groups.length === 0 ? (
+                                    {teams.length === 0 ? (
                                         <p className="text-xs text-muted-foreground">No teams available.</p>
-                                    ) : groups.map((team) => (
+                                    ) : teams.map((team) => (
                                         <div key={team.id} className="flex items-center space-x-2">
                                             <Checkbox
                                                 id={`team-${team.id}`}
@@ -430,7 +431,12 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                                     onFormChange(prev => ({ ...prev, teams: Array.from(current) }))
                                                 }}
                                             />
-                                            <label htmlFor={`team-${team.id}`} className="text-sm leading-none">{team.name}</label>
+                                            <label htmlFor={`team-${team.id}`} className="text-sm leading-none">
+                                                {team.name}
+                                                {team.description && (
+                                                    <span className="text-muted-foreground ml-1.5 text-xs">— {team.description}</span>
+                                                )}
+                                            </label>
                                         </div>
                                     ))}
                                 </div>

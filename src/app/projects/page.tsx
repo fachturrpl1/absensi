@@ -26,14 +26,14 @@ import {
     archiveProject, unarchiveProject, getSimpleMembersForDropdown,
 } from "@/action/projects"
 import { getClients } from "@/action/client"
-import { getAllGroups } from "@/action/group"
+import { getTeams } from "@/action/teams"
 import { useOrgStore } from "@/store/org-store"
 import type {
-    IClient, IGroup, IProject, ISimpleMember,
+    IClient, ITeams, IProject, ISimpleMember,
     IProjectTeamProject, IProjectTeamMember,
     Project, NewProjectForm,
 } from "@/interface"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 
 // ─── Mapper ──────────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export default function ProjectsPage() {
     const [pageSize, setPageSize] = useState(10)
     const [realMembers, setRealMembers] = useState<ISimpleMember[]>([])
     const [clients, setClients] = useState<IClient[]>([])
-    const [groups, setGroups] = useState<IGroup[]>([])
+    const [teams, setTeams] = useState<ITeams[]>([])
 
     const { organizationId } = useOrgStore()
 
@@ -117,42 +117,31 @@ export default function ProjectsPage() {
         setIsLoading(false)
     }
 
-
-    // ── Tambah ref ────────────────────────────────────────────────────────────────
     const dropdownsFetched = useRef(false)
 
     const fetchDropdowns = React.useCallback(async () => {
         if (!organizationId) return
-        // Hanya fetch 1x per session, tidak perlu refetch setiap org berubah
-        // kecuali org memang berubah
         if (dropdownsFetched.current) return
         dropdownsFetched.current = true
 
-        const [membersRes, clientsRes, groupsRes] = await Promise.all([
+        const [membersRes, clientsRes, teamsRes] = await Promise.all([
             getSimpleMembersForDropdown(organizationId),
             getClients(String(organizationId)),
-            getAllGroups(Number(organizationId)),
+            getTeams(Number(organizationId)),
         ])
         if (membersRes.success) setRealMembers(membersRes.data)
         if (clientsRes.success) setClients(clientsRes.data)
-        if (groupsRes.success) setGroups(groupsRes.data)
+        if (teamsRes.success) setTeams(teamsRes.data)
     }, [organizationId])
 
-    // Reset saat org berubah agar fetch ulang
     React.useEffect(() => {
         dropdownsFetched.current = false
     }, [organizationId])
 
     React.useEffect(() => {
         fetchProjects()
-        // Dropdown tidak perlu blocking — defer ke setelah projects selesai
         const t = setTimeout(() => fetchDropdowns(), 200)
         return () => clearTimeout(t)
-    }, [organizationId])
-
-    React.useEffect(() => {
-        fetchProjects()
-        fetchDropdowns()
     }, [organizationId])
 
     // ── Dialog state ──────────────────────────────────────────────────────────
@@ -410,7 +399,7 @@ export default function ProjectsPage() {
                     <AddProjectDialog
                         open={addOpen} onOpenChange={setAddOpen}
                         form={form} onFormChange={setForm}
-                        members={realMembers} clients={clients} groups={groups}
+                        members={realMembers} clients={clients} teams={teams}
                         onSave={async () => {
                             const names = form.names.split("\n").map(n => n.trim()).filter(Boolean)
                             const clientName = clients.find(c => String(c.id) === form.clientId)?.name ?? null
@@ -432,7 +421,7 @@ export default function ProjectsPage() {
                     <EditProjectDialog
                         open={Boolean(editing)} onOpenChange={(o: boolean) => { if (!o) setEditing(null) }}
                         project={editing} initialTab={editTab}
-                        members={realMembers} clients={clients} groups={groups}
+                        members={realMembers} clients={clients} teams={teams}
                         onSave={async (updatedForm) => {
                             if (editing) {
                                 await updateProject(Number(editing.id), {
@@ -553,7 +542,7 @@ export default function ProjectsPage() {
                                         {importFile && <div className="text-xs text-foreground">Selected: <span className="font-medium">{importFile.name}</span></div>}
                                     </div>
                                 </div>
-                                <button type="button" className="text-sm text-primary hover:underline underline-offset-4" onClick={() => {}}>Download the template here</button>
+                                <button type="button" className="text-sm text-primary hover:underline underline-offset-4" onClick={() => { }}>Download the template here</button>
                             </div>
                             <DialogFooter>
                                 <Button variant="outline" onClick={() => { setImportOpen(false); setImportFile(null) }}>Cancel</Button>

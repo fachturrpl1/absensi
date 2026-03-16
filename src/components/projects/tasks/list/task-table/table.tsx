@@ -9,7 +9,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { TaskRow } from "./row"
 import { TaskTableProps, ListPaginationProps } from "@/types/tasks"
 

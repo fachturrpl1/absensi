@@ -7,9 +7,6 @@
 //   • Shared UI     : activeTab
 //   • Mutations     : setTasks (optimistic), refreshTasks (server sync)
 //   • Header        : New Task dialog + Tab switcher + View switcher
-//
-// Child pages (list / kanban / timeline) HANYA membaca dari context.
-// Tidak ada fetch di child page manapun.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useEffect, useContext, createContext, use, useCallback } from "react"
@@ -172,7 +169,10 @@ function TasksViewSwitcher({ currentView, projectId }: {
                     )}
                     onClick={() => router.push(`${basePath}/${path}`)}
                 >
-                    <Icon className={cn("h-4 w-4", currentView === key ? "text-white" : "text-gray-400")} />
+                    <Icon
+                        className={cn("h-4 w-4",
+                            currentView === key ? "" : "text-muted-foreground"
+                        )} />
                     <span className="font-semibold text-xs uppercase tracking-tight">{label}</span>
                 </Button>
             ))}

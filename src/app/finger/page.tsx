@@ -35,8 +35,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { getCache, setCache } from "@/lib/local-cache"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
-import { getAllGroups } from "@/action/group"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
+import { getAllDepartments } from "@/action/department"
 
 interface Device {
   device_code: string
@@ -268,7 +268,7 @@ export default function FingerPage() {
   const fetchGroups = React.useCallback(async () => {
     if (!organizationId) return
     try {
-      const res = await getAllGroups(organizationId)
+      const res = await getAllDepartments(organizationId)
       if (res.success && res.data) {
         // Extract names and sort
         const groups = res.data

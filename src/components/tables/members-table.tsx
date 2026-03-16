@@ -3,25 +3,20 @@
 import React from "react"
 import { IOrganization_member } from "@/interface"
 import { Button } from "@/components/ui/button"
-import { Trash, Pencil, Eye, Check, X } from "lucide-react"
+import { Trash, Pencil } from "lucide-react"
 import { UserAvatar } from "@/components/profile&image/user-avatar"
 import { useRouter } from "next/navigation"
-
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { deleteOrganization_member } from "@/action/members"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
-import { PaginationFooter } from "./pagination-footer"
+import { PaginationFooter } from "../customs/pagination-footer"
 
 interface MembersTableProps {
   members: IOrganization_member[]
@@ -30,25 +25,36 @@ interface MembersTableProps {
   showPagination?: boolean
 }
 
+// ─── Helper: get full name ─────────────────────────────────────────────────────
+// Sama dengan computeName di lib/members-mapping
+function getFullName(member: any): string {
+  const first = member.user?.first_name || ""
+  const last = member.user?.last_name || ""
+  const display = member.user?.display_name || member.user?.name || ""
+  const full = `${first} ${last}`.trim()
+  return full || display || ""
+}
+
+// Helper: apakah member ini valid (punya nama yang layak ditampilkan)
+// Ini filter untuk skip row yang hanya punya initial seperti "H", "AS"
+function hasValidName(member: any): boolean {
+  return getFullName(member).length > 2
+}
+
+// Helper: get group name
+function getGroupName(member: any): string {
+  if (member.departments?.name) return member.departments.name
+  if (Array.isArray(member.departments) && member.departments[0]?.name) return member.departments[0].name
+  if (member.groupName) return member.groupName
+  return ""
+}
+
 export function MembersTable({ members, isLoading = false, onDelete, showPagination = true }: MembersTableProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [sortOrder] = React.useState("newest")
+
   const [pageSize, setPageSize] = React.useState("10")
   const [pageIndex, setPageIndex] = React.useState(0)
-  const [globalFilter] = React.useState("")
-  const [statusFilter] = React.useState("all")
-  const [visibleColumns] = React.useState({
-    avatar: true,
-    members: true,
-    // phone: true,
-    nik: true,
-    group: true,
-    gender: true,
-    religion: true,
-    status: true,
-    actions: true,
-  })
 
   const handleDelete = async (id: string) => {
     try {
@@ -57,377 +63,176 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
         toast.success("Member deleted successfully")
         await queryClient.invalidateQueries({ queryKey: ["members"] })
         onDelete?.()
-      } else {
-        toast.error(result.message || "Failed to delete member")
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "An error occurred")
+    } catch {
+      toast.error("An error occurred")
     }
   }
 
-  type MemberUser = {
-    id?: string
-    email?: string
-    first_name?: string
-    last_name?: string
-    display_name?: string
-    phone?: string
-    mobile?: string
-    profile_photo_url?: string
-    search_name?: string
-    jenis_kelamin?: string
-    agama?: string
-    is_active?: boolean
-  }
-  type MemberBiodata = { nik?: string; nama?: string; nickname?: string; jenis_kelamin?: string; agama?: string }
-  type MemberExtended = IOrganization_member & {
-    user?: MemberUser
-    biodata?: MemberBiodata
-    departments?: { name?: string } | Array<{ name?: string }>
-    groupName?: string
-    positions?: { title?: string }
-  }
+  // Filter out ghost rows — member dengan nama kosong atau hanya initial
+  const validMembers = React.useMemo(
+    () => members.filter(hasValidName),
+    [members]
+  )
 
-  const getFullName = (member: IOrganization_member) => {
-    const m = member as MemberExtended
-    const displayName = (m.user?.display_name ?? '').trim()
-    const firstName = m.user?.first_name ?? ''
-    const lastName = m.user?.last_name ?? ''
-    const rawEmail = (m.user?.email ?? '').trim()
-    const email = rawEmail && !rawEmail.toLowerCase().endsWith('@dummy.local') ? rawEmail : ''
-    const searchName = (m.user?.search_name ?? '').trim()
-    const fullName = [firstName, lastName].filter((p) => p && p.trim() !== '').join(' ').trim()
-    const biodataNama = (m.biodata?.nama ?? '').trim()
-    const biodataNickname = (m.biodata?.nickname ?? '').trim()
-    return displayName || fullName || email || searchName || biodataNama || biodataNickname || "No Name"
-  }
-
-  const getNik = (member: IOrganization_member): string => {
-    const m = member as MemberExtended
-    const nik = (m.biodata?.nik ?? '')
-    const nikAlt = ((member as unknown as { biodata_nik?: string }).biodata_nik ?? '')
-    return String(nik || nikAlt || '-')
-  }
-
-  const getGroupName = (member: IOrganization_member): string => {
-    const m = member as MemberExtended
-    if (m.groupName) return m.groupName
-    const dep = Array.isArray(m.departments) ? (m.departments[0] ?? undefined) : m.departments
-    return String(dep?.name || '-')
-  }
-
-  const getGender = (member: IOrganization_member): string => {
-    const m = member as MemberExtended
-    const gender = m.user?.jenis_kelamin || m.user?.gender
-    if (gender === 'male') return 'Male'
-    if (gender === 'female') return 'Female'
-    return String(gender || m.biodata?.jenis_kelamin || '-')
-  }
-
-  const getReligion = (member: IOrganization_member): string => {
-    const m = member as MemberExtended
-    return String(m.user?.agama || m.biodata?.agama || '-')
-  }
-
-
-  const MemberAvatar = ({ member }: { member: IOrganization_member }) => {
-    const m = member as MemberExtended
-    const user = m.user
-    const name = getFullName(member)
-
-    return (
-      <UserAvatar name={name} photoUrl={user?.profile_photo_url} userId={user?.id} />
-    )
-  }
-
-  // Filter and sort data
-  const filteredData = React.useMemo(() => {
-    let filtered = [...members]
-
-    // Apply global search filter
-    if (globalFilter) {
-      const searchTerm = globalFilter.toLowerCase()
-      filtered = filtered.filter((member) => {
-        const m = member as MemberExtended
-        const fullName = getFullName(member).toLowerCase()
-        const phone = ((m.user?.phone || m.user?.mobile || "")).toLowerCase()
-        const group = getGroupName(member).toLowerCase()
-        const nik = getNik(member).toLowerCase()
-        return (
-          fullName.includes(searchTerm) ||
-          phone.includes(searchTerm) ||
-          group.includes(searchTerm) ||
-          nik.includes(searchTerm)
-        )
-      })
-    }
-
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((member) => {
-        if (statusFilter === "active") return member.is_active
-        if (statusFilter === "inactive") return !member.is_active
-        return true
-      })
-    }
-
-    // Apply sorting
-    if (sortOrder === "newest") {
-      filtered.sort((a, b) => {
-        const dateA = new Date((a as any).created_at || 0).getTime()
-        const dateB = new Date((b as any).created_at || 0).getTime()
-        return dateB - dateA
-      })
-    } else if (sortOrder === "oldest") {
-      filtered.sort((a, b) => {
-        const dateA = new Date((a as any).created_at || 0).getTime()
-        const dateB = new Date((b as any).created_at || 0).getTime()
-        return dateA - dateB
-      })
-    } else if (sortOrder === "a-z") {
-      filtered.sort((a, b) => {
-        const nameA = getFullName(a).toLowerCase()
-        const nameB = getFullName(b).toLowerCase()
-        return nameA.localeCompare(nameB)
-      })
-    } else if (sortOrder === "z-a") {
-      filtered.sort((a, b) => {
-        const nameA = getFullName(a).toLowerCase()
-        const nameB = getFullName(b).toLowerCase()
-        return nameB.localeCompare(nameA)
-      })
-    }
-
-    return filtered
-  }, [globalFilter, statusFilter, sortOrder, members])
-
-  // Pagination
   const pageSizeNum = parseInt(pageSize)
-  const totalPages = Math.ceil(filteredData.length / pageSizeNum)
+  const totalPages = Math.ceil(validMembers.length / pageSizeNum)
   const paginatedData = showPagination
-    ? filteredData.slice(
-      pageIndex * pageSizeNum,
-      (pageIndex + 1) * pageSizeNum
-    )
-    : filteredData
-
-  // Reset page index when filters change
-  React.useEffect(() => {
-    setPageIndex(0)
-  }, [globalFilter, statusFilter, sortOrder])
-
-  // Clamp page index if it exceeds total pages
-  React.useEffect(() => {
-    if (pageIndex >= totalPages && totalPages > 0) {
-      setPageIndex(totalPages - 1)
-    }
-  }, [totalPages, pageIndex])
+    ? validMembers.slice(pageIndex * pageSizeNum, (pageIndex + 1) * pageSizeNum)
+    : validMembers
 
   return (
-    <div className="w-full">
-      <style jsx global>{`
-        html body .custom-hover-row:hover,
-        html body .custom-hover-row:hover > td {
-          background-color: #d1d5db !important; /* dark gray hover */
-        }
-        html body.dark .custom-hover-row:hover,
-        html body.dark .custom-hover-row:hover > td {
-          background-color: #374151 !important;
-        }
-      `}</style>
+    <div className="w-full space-y-4">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent border-b border-border">
+            <TableHead className="w-10 px-4" />
+            <TableHead className="font-medium text-xs uppercase tracking-wide py-3">Name</TableHead>
+            <TableHead className="font-medium text-xs uppercase tracking-wide">Identification</TableHead>
+            <TableHead className="font-medium text-xs uppercase tracking-wide">Group</TableHead>
+            <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">Gender</TableHead>
+            <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">Religion</TableHead>
+            <TableHead className="font-medium text-xs uppercase tracking-wide">Status</TableHead>
+            <TableHead className="w-20 text-right pr-6 font-medium text-xs uppercase tracking-wide">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={8} className="h-32 text-center text-muted-foreground italic text-sm">
+                Loading members...
+              </TableCell>
+            </TableRow>
+          ) : paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={8} className="h-24 text-center text-muted-foreground py-6">
+                No members found matching your criteria.
+              </TableCell>
+            </TableRow>
+          ) : paginatedData.map((member) => {
+            const fullName = getFullName(member)
+            const groupName = getGroupName(member)
+            const gender = (member as any).user?.jenis_kelamin || null
+            const religion = (member as any).user?.agama || null
+            const nik = (member as any).biodata?.nik || (member as any).biodata_nik || null
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800">
-        <table className="w-full min-w-[880px]">
-          {/* Header */}
-          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-            <tr>
-              {visibleColumns.avatar && (
-                <th className="p-3 text-left text-xs font-medium text-foreground w-10"></th>
-              )}
-              {visibleColumns.members && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Name</th>
-              )}
-              {visibleColumns.nik && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Identification</th>
-              )}
-              {/* {visibleColumns.phone && (
-              <th className="p-3 text-left text-xs font-medium text-foreground">Phone Number</th>
-            )} */}
-              {visibleColumns.group && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Group</th>
-              )}
-              {visibleColumns.gender && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Gender</th>
-              )}
-              {visibleColumns.religion && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Religion</th>
-              )}
-              {visibleColumns.status && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Status</th>
-              )}
-              {visibleColumns.actions && (
-                <th className="p-3 text-left text-xs font-medium text-foreground">Actions</th>
-              )}
-            </tr>
-          </thead>
+            return (
+              <TableRow
+                key={member.id}
+                className="group cursor-pointer hover:bg-muted/50 transition-colors w-full"
+                onClick={() => router.push(`/members/${member.id}`)}
+              >
+                {/* Avatar */}
+                <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                  <UserAvatar
+                    name={fullName}
+                    photoUrl={(member as any).user?.profile_photo_url}
+                    className="h-8 w-8 text-xs"
+                  />
+                </TableCell>
 
-          {/* Body */}
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
-                  Loading...
-                </td>
-              </tr>
-            ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={Object.values(visibleColumns).filter(Boolean).length} className="px-3 py-6 text-center text-muted-foreground text-sm">
-                  No members found
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((member) => {
-                return (
-                  <tr
-                    key={member.id}
-                    style={{}}
-                    className="border-b border-gray-100 dark:border-gray-800 transition-colors custom-hover-row even:bg-gray-50 dark:even:bg-gray-900/50"
-                  >
-                    {visibleColumns.avatar && (
-                      <td className="p-3">
-                        <MemberAvatar member={member} />
-                      </td>
-                    )}
-                    {visibleColumns.members && (
-                      <td className="p-3 text-xs">
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/members/${member.id}`)}
-                          className="truncate text-primary hover:underline cursor-pointer"
-                          title="View profile"
+                {/* Name */}
+                <TableCell className="py-3">
+                  <span className="font-medium text-sm block truncate max-w-[200px]">
+                    {fullName}
+                  </span>
+                </TableCell>
+
+                {/* Identification / NIK */}
+                <TableCell className="text-sm text-muted-foreground">
+                  {nik ?? <span className="text-muted-foreground/50">—</span>}
+                </TableCell>
+
+                {/* Group — mengikuti badge style projects table */}
+                <TableCell>
+                  {groupName ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground">
+                      {groupName}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/50 text-sm">—</span>
+                  )}
+                </TableCell>
+
+                {/* Gender */}
+                <TableCell className="hidden md:table-cell text-sm text-muted-foreground capitalize">
+                  {gender ?? <span className="text-muted-foreground/50">—</span>}
+                </TableCell>
+
+                {/* Religion */}
+                <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                  {religion ?? <span className="text-muted-foreground/50">—</span>}
+                </TableCell>
+
+                {/* Status */}
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`h-2 w-2 rounded-full shrink-0 ${member.is_active ? "bg-green-500" : "bg-gray-300"}`} />
+                    <span className="text-xs font-medium">
+                      {member.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                </TableCell>
+
+                {/* Actions — mengikuti pola projects: visible on hover, outline button */}
+                <TableCell className="px-4 pr-6 text-right" onClick={e => e.stopPropagation()}>
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => router.push(`/members/edit/${member.id}`)}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:bg-red-50 hover:border-red-200"
                         >
-                          {getFullName(member)}
-                        </button>
-                      </td>
-                    )}
-                    {visibleColumns.nik && (
-                      <td className="p-3 text-xs">
-                        {getNik(member)}
-                      </td>
-                    )}
-                    {/* {visibleColumns.phone && (
-                    <td className="p-3 text-xs">
-                      {user?.phone || "No Phone"}
-                    </td>
-                  )} */}
-
-                    {visibleColumns.group && (
-                      <td className="p-3 text-xs">
-                        {getGroupName(member)}
-                      </td>
-                    )}
-
-                    {visibleColumns.gender && (
-                      <td className="p-3 text-xs">
-                        {getGender(member)}
-                      </td>
-                    )}
-
-                    {visibleColumns.religion && (
-                      <td className="p-3 text-xs">
-                        {getReligion(member)}
-                      </td>
-                    )}
-
-
-                    {visibleColumns.status && (
-                      <td className="p-3 text-xs">
-                        {member.is_active ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-primary-foreground">
-                            <Check className="w-3 h-3 mr-1" /> Active
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                            <X className="w-3 h-3 mr-1" /> Inactive
-                          </span>
-                        )}
-                      </td>
-                    )}
-
-                    {visibleColumns.actions && (
-                      <td className="p-3 text-xs">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => router.push(`/members/edit/${member.id}`)}
-                            title="Edit member"
+                          <Trash className="w-3.5 h-3.5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete <span className="font-semibold text-foreground">{fullName}</span> from the system.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(member.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => router.push(`/members/${member.id}`)}
-                            title="View member"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                title="Delete member"
-                              >
-                                <Trash className="w-4 h-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Member</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete {getFullName(member)}? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(member.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
 
-      {/* Pagination Footer */}
       {showPagination && (
         <PaginationFooter
           page={pageIndex + 1}
           totalPages={totalPages || 1}
-          onPageChange={(p) => setPageIndex(Math.max(0, Math.min((p - 1), Math.max(0, totalPages - 1))))}
+          onPageChange={(p) => setPageIndex(p - 1)}
           isLoading={isLoading}
-          from={filteredData.length > 0 ? pageIndex * pageSizeNum + 1 : 0}
-          to={Math.min((pageIndex + 1) * pageSizeNum, filteredData.length)}
-          total={filteredData.length}
+          from={validMembers.length > 0 ? pageIndex * pageSizeNum + 1 : 0}
+          to={Math.min((pageIndex + 1) * pageSizeNum, validMembers.length)}
+          total={validMembers.length}
           pageSize={pageSizeNum}
-          onPageSizeChange={(size) => { setPageSize(String(size)); setPageIndex(0); }}
+          onPageSizeChange={(size) => { setPageSize(String(size)); setPageIndex(0) }}
           pageSizeOptions={[5, 10, 20, 50]}
         />
       )}

@@ -334,3 +334,24 @@ div[style*="position: relative"]:active {
   scrollbar-width: thin;
   scrollbar-color: #d1d5db transparent;
 }
+
+/*shimmer loading*/
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground) / 0.1) 25%,
+    hsl(var(--muted) / 0.4) 50%, 
+    hsl(var(--muted-foreground) / 0.1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

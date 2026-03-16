@@ -8,9 +8,36 @@ async function getSupabase() {
     return await createClient();
 }
 
-/**
- * Fetch all clients for the current organization
- */
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ClientRow extends Omit<IClient, 'project_count' | 'task_count'> {
+    client_projects: Array<{
+        project_id: number
+        projects: {
+            id: number
+            name: string
+            tasks: Array<{ id: number }>
+        } | null
+    }>
+}
+
+interface ClientInsertPayload {
+    organization_id: number
+    name: string
+    address?: string | null
+    phone?: string | null
+    email?: string | null
+    status: 'active' | 'archived'
+    budget_type?: string | null
+    budget_amount?: number | null
+    notify_percentage?: number
+    invoice_notes?: string | null
+    net_terms_days?: number
+    auto_invoice_frequency?: string | null
+}
+
+// ─── Read ─────────────────────────────────────────────────────────────────────
+
 export const getClients = async (organizationId?: string | number) => {
     const supabase = await getSupabase();
     let targetOrgId = organizationId;
@@ -20,7 +47,7 @@ export const getClients = async (organizationId?: string | number) => {
             targetOrgId = await getUserOrganization(supabase);
         } catch (error) {
             console.error("getClients: org resolution failed:", error);
-            return { success: false, message: "Unauthorized or no organization found", data: [] };
+            return { success: false, message: "Unauthorized or no organization found", data: [] as IClient[] };
         }
     }
 
@@ -28,10 +55,9 @@ export const getClients = async (organizationId?: string | number) => {
         .from("clients")
         .select(`
             *,
-            projects (
-                id,
-                name,
-                tasks (id)
+            client_projects(
+                project_id,
+                projects:projects(id, name, tasks(id))
             )
         `)
         .eq("organization_id", targetOrgId)
@@ -39,40 +65,57 @@ export const getClients = async (organizationId?: string | number) => {
 
     if (error) {
         console.error("getClients error:", error);
-        return { success: false, message: error.message, data: [] };
+        return { success: false, message: error.message, data: [] as IClient[] };
     }
 
-    return {
-        success: true,
-        data: data?.map((client: any) => ({
+    const mapped = (data as ClientRow[]).map((client) => {
+        const projects = client.client_projects?.map(cp => cp.projects).filter(Boolean) ?? []
+        const task_count = projects.reduce(
+            (acc, proj) => acc + (proj?.tasks?.length ?? 0), 0
+        )
+        return {
             ...client,
-            project_count: client.projects?.length || 0,
-            task_count: client.projects?.reduce((acc: number, proj: any) => acc + (proj.tasks?.length || 0), 0) || 0
-        })) as IClient[]
-    };
+            client_projects: undefined,
+            project_count: projects.length,
+            task_count,
+        } as unknown as IClient
+    })
+
+    return { success: true, data: mapped };
 };
 
-/**
- * Create a new client
- */
+// ─── Create ───────────────────────────────────────────────────────────────────
+
 export const createClientAction = async (formData: FormData) => {
     const supabase = await getSupabase();
-    const project_ids_raw = formData.get("project_ids") as string;
-    const projectIds = project_ids_raw ? JSON.parse(project_ids_raw) : [];
 
-    // Extract client data from FormData
-    const clientData: Partial<IClient> = {
+    let organizationId: number;
+    try {
+        organizationId = await getUserOrganization(supabase) as number;
+    } catch {
+        return { success: false, message: "Unauthorized", data: null };
+    }
+
+    const project_ids_raw = formData.get("project_ids") as string | null;
+    const projectIds: number[] = project_ids_raw ? JSON.parse(project_ids_raw) : [];
+
+    const budgetAmountRaw = formData.get("budget_amount") as string | null
+    const notifyRaw = formData.get("notify_percentage") as string | null
+    const netTermsRaw = formData.get("net_terms_days") as string | null
+
+    const clientData: ClientInsertPayload = {
+        organization_id: organizationId,
         name: formData.get("name") as string,
-        address: formData.get("address") as string,
-        phone: formData.get("phone") as string,
-        email: formData.get("email") as string,
-        status: (formData.get("status") as any) || 'active',
-        budget_type: formData.get("budget_type") as any,
-        budget_amount: formData.get("budget_amount") ? parseFloat(formData.get("budget_amount") as string) : null,
-        notify_percentage: formData.get("notify_percentage") ? parseInt(formData.get("notify_percentage") as string) : 80,
-        invoice_notes: formData.get("invoice_notes") as string,
-        net_terms_days: formData.get("net_terms_days") ? parseInt(formData.get("net_terms_days") as string) : 30,
-        auto_invoice_frequency: formData.get("auto_invoice_frequency") as string
+        address: formData.get("address") as string || null,
+        phone: formData.get("phone") as string || null,
+        email: formData.get("email") as string || null,
+        status: (formData.get("status") as 'active' | 'archived') || 'active',
+        budget_type: formData.get("budget_type") as string || null,
+        budget_amount: budgetAmountRaw ? parseFloat(budgetAmountRaw) : null,
+        notify_percentage: notifyRaw ? parseInt(notifyRaw) : 80,
+        invoice_notes: formData.get("invoice_notes") as string || null,
+        net_terms_days: netTermsRaw ? parseInt(netTermsRaw) : 30,
+        auto_invoice_frequency: formData.get("auto_invoice_frequency") as string || null,
     };
 
     const { data, error } = await supabase
@@ -85,10 +128,10 @@ export const createClientAction = async (formData: FormData) => {
         return { success: false, message: error.message, data: null };
     }
 
-    if (projectIds && projectIds.length > 0) {
-        const clientProjects = projectIds.map((projectId: number) => ({
-            client_id: data.id,
-            project_id: projectId
+    if (projectIds.length > 0) {
+        const clientProjects = projectIds.map((projectId) => ({
+            client_id: data.id as number,
+            project_id: projectId,
         }));
         await supabase.from("client_projects").insert(clientProjects);
     }
@@ -96,26 +139,30 @@ export const createClientAction = async (formData: FormData) => {
     return { success: true, message: "Client created successfully", data: data as IClient };
 };
 
-/**
- * Update an existing client
- */
+// ─── Update ───────────────────────────────────────────────────────────────────
+
 export const updateClientAction = async (formData: FormData) => {
     const supabase = await getSupabase();
     const id = Number(formData.get("id"));
-    const project_ids_raw = formData.get("project_ids") as string;
-    const projectIds = project_ids_raw ? JSON.parse(project_ids_raw) : undefined;
 
-    const clientData: Partial<IClient> = {
+    const project_ids_raw = formData.get("project_ids") as string | null;
+    const projectIds: number[] | undefined = project_ids_raw ? JSON.parse(project_ids_raw) : undefined;
+
+    const budgetAmountRaw = formData.get("budget_amount") as string | null
+    const notifyRaw = formData.get("notify_percentage") as string | null
+    const netTermsRaw = formData.get("net_terms_days") as string | null
+
+    const clientData: Partial<ClientInsertPayload> = {
         name: formData.get("name") as string,
-        address: formData.get("address") as string,
-        phone: formData.get("phone") as string,
-        email: formData.get("email") as string,
-        budget_type: formData.get("budget_type") as any,
-        budget_amount: formData.get("budget_amount") ? parseFloat(formData.get("budget_amount") as string) : null,
-        notify_percentage: formData.get("notify_percentage") ? parseInt(formData.get("notify_percentage") as string) : 80,
-        invoice_notes: formData.get("invoice_notes") as string,
-        net_terms_days: formData.get("net_terms_days") ? parseInt(formData.get("net_terms_days") as string) : 30,
-        auto_invoice_frequency: formData.get("auto_invoice_frequency") as string
+        address: formData.get("address") as string || null,
+        phone: formData.get("phone") as string || null,
+        email: formData.get("email") as string || null,
+        budget_type: formData.get("budget_type") as string || null,
+        budget_amount: budgetAmountRaw ? parseFloat(budgetAmountRaw) : null,
+        notify_percentage: notifyRaw ? parseInt(notifyRaw) : 80,
+        invoice_notes: formData.get("invoice_notes") as string || null,
+        net_terms_days: netTermsRaw ? parseInt(netTermsRaw) : 30,
+        auto_invoice_frequency: formData.get("auto_invoice_frequency") as string || null,
     };
 
     const { data, error } = await supabase
@@ -132,9 +179,9 @@ export const updateClientAction = async (formData: FormData) => {
     if (projectIds !== undefined) {
         await supabase.from("client_projects").delete().eq("client_id", id);
         if (projectIds.length > 0) {
-            const clientProjects = projectIds.map((projectId: number) => ({
+            const clientProjects = projectIds.map((projectId) => ({
                 client_id: id,
-                project_id: projectId
+                project_id: projectId,
             }));
             await supabase.from("client_projects").insert(clientProjects);
         }
@@ -143,9 +190,8 @@ export const updateClientAction = async (formData: FormData) => {
     return { success: true, message: "Client updated successfully", data: data as IClient };
 };
 
-/**
- * Archive/Restore a client (soft delete or status change)
- */
+// ─── Status ───────────────────────────────────────────────────────────────────
+
 export const updateClientStatus = async (formData: FormData) => {
     const supabase = await getSupabase();
     const id = Number(formData.get("id"));
@@ -156,16 +202,12 @@ export const updateClientStatus = async (formData: FormData) => {
         .update({ status })
         .eq("id", id);
 
-    if (error) {
-        return { success: false, message: error.message };
-    }
-
+    if (error) return { success: false, message: error.message };
     return { success: true, message: `Client ${status === 'archived' ? 'archived' : 'restored'} successfully` };
 };
 
-/**
- * Delete a client
- */
+// ─── Delete ───────────────────────────────────────────────────────────────────
+
 export const deleteClientAction = async (formData: FormData) => {
     const supabase = await getSupabase();
     const id = Number(formData.get("id"));
@@ -175,9 +217,6 @@ export const deleteClientAction = async (formData: FormData) => {
         .delete()
         .eq("id", id);
 
-    if (error) {
-        return { success: false, message: error.message };
-    }
-
+    if (error) return { success: false, message: error.message };
     return { success: true, message: "Client deleted successfully" };
 };

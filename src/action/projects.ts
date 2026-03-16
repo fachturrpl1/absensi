@@ -333,10 +333,6 @@ export const deleteProject = async (id: number) => {
     return { success: true };
 };
 
-/**
- * Fetch a flat list of members for dropdown pickers.
- * Uses admin client to bypass RLS.
- */
 export const getSimpleMembersForDropdown = async (
     organizationId: number | string
 ): Promise<{ success: boolean; data: ISimpleMember[] }> => {
@@ -346,6 +342,7 @@ export const getSimpleMembersForDropdown = async (
         .from("organization_members")
         .select(`
             id,
+            department_id,
             user_profiles!organization_members_user_id_fkey(
                 id,
                 first_name,
@@ -372,7 +369,11 @@ export const getSimpleMembersForDropdown = async (
             const name = profile
                 ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || profile.display_name || "Unknown"
                 : "Unknown";
-            return { id: String(m.id), name };
+            return {
+                id: String(m.id),
+                name,
+                department_id: m.department_id ? String(m.department_id) : null,
+            };
         })
         .filter((m) => m.name !== "Unknown");
 

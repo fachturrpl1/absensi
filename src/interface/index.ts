@@ -133,6 +133,19 @@ export interface IProjectMetadata {
     [key: string]: unknown;
 }
 
+export interface ITeams {
+    id: number;
+    organization_id: number;
+    code: string;
+    name: string;
+    description?: string;
+    is_active: boolean;
+    created_at: string;
+    updated_at?: string;
+    settings?: string;
+    metadata?: string;
+}
+
 // ── Domain types (used throughout the app) ───────────────────────────────────
 
 export interface IProjectTeamMemberUser {
@@ -232,6 +245,7 @@ export interface IProjectWithMembers extends IProject {
 export interface ISimpleMember {
     id: string;
     name: string;
+    department_id?: string | null;
 }
 
 // ─── Project Payload Types ────────────────────────────────────────────────────

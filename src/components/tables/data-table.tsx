@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { Columns3Cog, Loader2, Filter } from "lucide-react"
-import { PaginationFooter } from "./pagination-footer"
+import { PaginationFooter } from "../customs/pagination-footer"
 import {
   Select,
   SelectContent,

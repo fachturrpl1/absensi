@@ -5,7 +5,7 @@ import { InsightsHeader } from "@/components/insights/InsightsHeader"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { format } from "date-fns"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { useTimezone } from "@/components/providers/timezone-provider"
 import { exportToCSV, generateFilename, type ExportColumn } from "@/lib/export-utils"
 import { toast } from "sonner"
@@ -233,7 +233,7 @@ export default function AppsUrlsPage() {
                                             <td className="p-4 text-gray-600">{app.date}</td>
                                             <td className="p-4 text-right font-medium">{formatMinutes(app.timeSpent)}</td>
                                             <td className="p-4 text-right text-gray-600">
-                                               
+
                                             </td>
                                         </tr>
                                     ))}

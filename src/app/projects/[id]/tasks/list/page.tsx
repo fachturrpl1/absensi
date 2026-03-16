@@ -29,7 +29,7 @@ import {
     Dialog, DialogContent, DialogFooter,
     DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { updateTask, deleteTask, assignTaskMember } from "@/action/task"
 import { toast } from "sonner"
 import { ITask } from "@/interface"
@@ -48,19 +48,19 @@ export default function ListPage() {
     const searchParams = useSearchParams()
 
     // ── Local UI state ─────────────────────────────────────────────────────────
-    const [searchQuery, setSearchQuery]     = useState(searchParams.get("q") || "")
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
     const [selectedAssignee, setSelectedAssignee] = useState("all")
-    const [currentPage, setCurrentPage]     = useState(1)
-    const [pageSize, setPageSize]           = useState(10)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize, setPageSize] = useState(10)
     const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set())
-    const [rowSelection, setRowSelection]   = useState<Record<string, boolean>>({})
+    const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
     // ── Dialog state ───────────────────────────────────────────────────────────
-    const [taskToDelete, setTaskToDelete]   = useState<ITask | null>(null)
-    const [editingTask, setEditingTask]     = useState<ITask | null>(null)
-    const [editTitle, setEditTitle]         = useState("")
-    const [editStatus, setEditStatus]       = useState<number | "">("")
-    const [editAssignee, setEditAssignee]   = useState<number | "">("")
+    const [taskToDelete, setTaskToDelete] = useState<ITask | null>(null)
+    const [editingTask, setEditingTask] = useState<ITask | null>(null)
+    const [editTitle, setEditTitle] = useState("")
+    const [editStatus, setEditStatus] = useState<number | "">("")
+    const [editAssignee, setEditAssignee] = useState<number | "">("")
 
     // ── Reset pagination saat filter berubah ──────────────────────────────────
     useEffect(() => {
@@ -96,10 +96,10 @@ export default function ListPage() {
     }, [tasks, projectId, activeTab, selectedAssignee, searchQuery])
 
     // ── Tree + pagination ──────────────────────────────────────────────────────
-    const taskTree     = useMemo(() => buildTaskTree(filteredTasks), [filteredTasks])
+    const taskTree = useMemo(() => buildTaskTree(filteredTasks), [filteredTasks])
     const paginatedTree = useMemo(() => taskTree.slice((currentPage - 1) * pageSize, currentPage * pageSize), [taskTree, currentPage, pageSize])
-    const displayRows  = useMemo(() => flattenTree(paginatedTree, expandedTasks), [paginatedTree, expandedTasks])
-    const totalPages   = Math.ceil(taskTree.length / pageSize) || 1
+    const displayRows = useMemo(() => flattenTree(paginatedTree, expandedTasks), [paginatedTree, expandedTasks])
+    const totalPages = Math.ceil(taskTree.length / pageSize) || 1
 
     // ── Selection ──────────────────────────────────────────────────────────────
     const selectedIds = Object.keys(rowSelection).filter(k => rowSelection[k])
@@ -218,7 +218,7 @@ export default function ListPage() {
             </div>
 
             {/* Table */}
-            <div className="border rounded-xl overflow-hidden shadow-sm bg-white">
+            <div className="">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -227,7 +227,6 @@ export default function ListPage() {
                                 <TableHead>Task</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Assignee</TableHead>
-                                <TableHead>Client</TableHead>
                                 <TableHead>Created</TableHead>
                                 <TableHead className="text-right w-24">Actions</TableHead>
                             </TableRow>
@@ -244,8 +243,6 @@ export default function ListPage() {
                             ) : (
                                 displayRows.map(({ node: task, depth, hasChildren }) => {
                                     const isExpanded = expandedTasks.has(task.id)
-                                    const clientData = task.project?.client
-                                    const clientName = Array.isArray(clientData) ? clientData[0]?.name : (clientData as any)?.name
                                     return (
                                         <TableRow key={task.id} className={cn(depth > 0 && "bg-muted/30")}>
                                             <TableCell><Checkbox checked={!!rowSelection[task.id.toString()]} onCheckedChange={() => toggleSelect(task.id.toString())} /></TableCell>
@@ -269,7 +266,6 @@ export default function ListPage() {
                                                     ? <StackedAssignees assignees={task.assignees} max={3} />
                                                     : <span className="text-xs text-muted-foreground">Unassigned</span>}
                                             </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{clientName || "—"}</TableCell>
                                             <TableCell className="text-sm text-muted-foreground">
                                                 {task.created_at ? new Date(task.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                                             </TableCell>

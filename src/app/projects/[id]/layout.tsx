@@ -25,7 +25,7 @@ export default function ProjectLayout({
 
     return (
         <div className="flex flex-col h-full">
-            <div className="px-6 py-4 flex flex-col gap-4 bg-white">
+            <div className="px-6 py-4 flex flex-col gap-4">
                 {/* Breadcrumbs */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Link href="/projects" className="hover:text-foreground flex items-center gap-1">

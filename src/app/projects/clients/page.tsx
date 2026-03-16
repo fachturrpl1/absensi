@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Plus, Search, Loader2 } from "lucide-react"
 import { AddClientDialog, type ClientFormData } from "@/components/projects/clients/add-client-dilaog"
 import { ClientsTable, type Client } from "@/components/projects/clients/clients-table"
-import { PaginationFooter } from "@/components/tables/pagination-footer"
+import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { getClients, createClientAction, updateClientAction, updateClientStatus, deleteClientAction } from "@/action/client"
 import { useSearchParams } from "next/navigation"
 import { IClient } from "@/interface"
