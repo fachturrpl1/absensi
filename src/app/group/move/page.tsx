@@ -443,8 +443,10 @@ export default function MoveGroupPage() {
 
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="p-4 md:p-6 bg-white rounded-lg shadow-sm border border-gray-200 space-y-4">
+    <div className="flex flex-col gap-4 p-4 pt-0">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Move Members</h1>
+      </div>
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             Move from
@@ -494,7 +496,6 @@ export default function MoveGroupPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-4">
           <Button variant="outline" size="sm" onClick={fetchData} className="whitespace-nowrap">

@@ -22,7 +22,6 @@ const parentMapping: Record<string, string> = {
   '/schedule/member': '/schedule',
   '/leaves/new': '/leaves',
   '/leaves/types': '/leaves',
-  '/group': '/members',
   '/position': '/members',
   '/organization/finger': '/organization',
 };

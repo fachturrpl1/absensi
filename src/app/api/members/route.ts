@@ -129,7 +129,11 @@ export async function GET(req: Request) {
         countQuery = countQuery.eq('is_active', active)
       }
       if (departmentParam && departmentParam !== 'all') {
-        countQuery = countQuery.eq('department_id', departmentParam)
+        if (departmentParam === 'null') {
+          countQuery = countQuery.is('department_id', null)
+        } else {
+          countQuery = countQuery.eq('department_id', departmentParam)
+        }
       }
       // Note: Search di count query dihapus karena akan dilakukan di client-side
       // untuk mencakup semua field termasuk joined fields (nama, department)
@@ -193,7 +197,11 @@ export async function GET(req: Request) {
       dataQuery = dataQuery.eq('is_active', active)
     }
     if (departmentParam && departmentParam !== 'all') {
-      dataQuery = dataQuery.eq('department_id', departmentParam)
+      if (departmentParam === 'null') {
+        dataQuery = dataQuery.is('department_id', null)
+      } else {
+        dataQuery = dataQuery.eq('department_id', departmentParam)
+      }
     }
 
     // Note: Search dihapus dari API query karena akan dilakukan di client-side

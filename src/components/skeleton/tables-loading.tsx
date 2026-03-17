@@ -92,6 +92,15 @@ export const groupsColumns: ColumnSkeletonDef[] = [
   { cell: "actions",  headClassName: "w-24 text-right pr-4",     cellClassName: "pr-4 text-right" },
 ]
 
+export const groupMembersSkeletonColumns: ColumnSkeletonDef[] = [
+  { cell: "avatar",  headClassName: "w-10 px-4",             cellClassName: "px-4 py-3" },
+  { cell: "name",    headerWidth: "w-24",                     cellClassName: "py-3" },
+  { cell: "number",  headerWidth: "w-16",  cellWidth: "w-32" },
+  { cell: "text",    headerWidth: "w-12",  cellWidth: "w-14", hiddenMobile: true },
+  { cell: "text",    headerWidth: "w-14",  cellWidth: "w-16", hiddenMobile: true },
+  { cell: "status",  headerWidth: "w-16" },
+]
+
 // ── Cell renderers ─────────────────────────────────────────────────────────────
 
 function CellSkeleton({ type, cellWidth }: { type: ColumnSkeletonDef["cell"]; cellWidth?: string }) {

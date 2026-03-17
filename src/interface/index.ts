@@ -89,6 +89,36 @@ export interface IGroup {
 
 export type IDepartments = IGroup;
 
+// ─── Group Member ─────────────────────────────────────────────────────────────
+
+export interface IGroupMember {
+    id: string;
+    organization_id?: string | null;
+    department_id?: string | null;
+    is_active: boolean;
+    biodata_nik?: string | null;
+    hire_date?: string;
+    user?: {
+        id?: string;
+        first_name?: string | null;
+        last_name?: string | null;
+        display_name?: string | null;
+        profile_photo_url?: string | null;
+        nik?: string | null;
+        jenis_kelamin?: string | null;
+        agama?: string | null;
+        email?: string | null;
+    } | null;
+    departments?: {
+        id: string;
+        name: string;
+    } | null;
+    positions?: {
+        id: string;
+        title: string;
+    } | null;
+}
+
 // ─── Position ─────────────────────────────────────────────────────────────────
 
 export interface IPositions {
