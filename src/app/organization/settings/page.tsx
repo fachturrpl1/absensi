@@ -3,7 +3,7 @@
 // src/app/organization/settings/page.tsx
 // Thin page — hanya compose komponen dan wire hooks
 
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2 } from "@/components/icons/lucide-exports";
 
@@ -20,6 +20,10 @@ import { DangerZoneCard } from "@/components/organization/settings/danger-zone-c
 import type { OrganizationData } from "@/types/organization/org-settings";
 
 export default function SettingsPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   // ----------------------------------------------------------
   // Hooks
   // ----------------------------------------------------------
@@ -66,19 +70,13 @@ export default function SettingsPage() {
     [setFormData],
   );
 
-  // ----------------------------------------------------------
-  // Save: resolve logo URL dulu, lalu save form
-  // ----------------------------------------------------------
   const onSave = useCallback(async () => {
     const { url, ok } = await resolveLogoUrl();
-    if (!ok) return; // Error sudah ditampilkan di dalam hook
+    if (!ok) return;
     await handleSave(url);
   }, [resolveLogoUrl, handleSave]);
 
-  // ----------------------------------------------------------
-  // Loading state
-  // ----------------------------------------------------------
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -86,9 +84,6 @@ export default function SettingsPage() {
     );
   }
 
-  // ----------------------------------------------------------
-  // Render
-  // ----------------------------------------------------------
   return (
     <div className="flex flex-1 flex-col w-full">
       <div className="p-6 w-full overflow-x-auto">

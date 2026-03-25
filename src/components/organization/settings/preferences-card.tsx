@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -32,17 +33,25 @@ interface PreferencesCardProps {
 }
 
 export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const { data: timezones, isLoading: loadingTz } = useTimezones();
   const { data: currencies, isLoading: loadingCur } = useCurrencies();
+
+  const isTzLoading = loadingTz || !mounted;
+  const isCurLoading = loadingCur || !mounted;
 
   // Group timezone berdasarkan region untuk UX lebih baik
   const timezoneGroups = timezones
     ? timezones.reduce<Record<string, typeof timezones>>((acc, tz) => {
-        const region = tz.region || "Other";
-        if (!acc[region]) acc[region] = [];
-        acc[region].push(tz);
-        return acc;
-      }, {})
+      const region = tz.region || "Other";
+      if (!acc[region]) acc[region] = [];
+      acc[region].push(tz);
+      return acc;
+    }, {})
     : {};
 
   return (
@@ -62,7 +71,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             Timezone
           </Label>
-          {loadingTz ? (
+          {isTzLoading ? (
             <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading timezones...
@@ -98,7 +107,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
           <Label htmlFor="org-currency" className="text-sm font-medium">
             Currency
           </Label>
-          {loadingCur ? (
+          {isCurLoading ? (
             <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading currencies...
