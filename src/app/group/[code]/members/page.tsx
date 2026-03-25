@@ -167,7 +167,7 @@ export default function GroupMembersPage() {
   } = useQuery({
     queryKey: ["group-stats", groupId ?? groupCode, organizationId],
     queryFn: async () => {
-      const url = new URL("/api/members/stats", window.location.origin)
+      const url = new URL("/api/groups/stats", window.location.origin)
       url.searchParams.set("groupId", groupCode === "no-group" ? "null" : String(groupId))
       if (organizationId) url.searchParams.set("organizationId", String(organizationId))
       const res = await fetch(url.toString(), { credentials: "same-origin" })
@@ -205,28 +205,24 @@ export default function GroupMembersPage() {
           value={statsData?.totalMembers ?? 0}
           loading={statsLoading}
           icon={Users}
-          trend="neutral"
         />
         <StatsCard
           title="Today Present"
           value={statsData?.todayPresent ?? 0}
           loading={statsLoading}
           icon={CheckCircle}
-          trend="up"
         />
         <StatsCard
           title="Today Absent"
           value={statsData?.todayAbsent ?? 0}
           loading={statsLoading}
           icon={XCircle}
-          trend="down"
         />
         <StatsCard
           title="Active Members"
           value={statsData?.activeMembers ?? 0}
           loading={statsLoading}
           icon={Activity}
-          trend="neutral"
         />
       </div>
 

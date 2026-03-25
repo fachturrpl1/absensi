@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation"
 import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet, X } from "lucide-react"
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia,
-} from "@/components/ui/empty"  
+} from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
@@ -297,7 +297,11 @@ export default function GroupsPage() {
               <Pencil className="h-4 w-4" />
             </Button>
             <Link href={`/group/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ""}`}>
-              <Button variant="ghost" size="icon" className="h-8 w-8" title="Move member(s)">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:cursor-pointer"
+                title="Move member(s)">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </Link>
