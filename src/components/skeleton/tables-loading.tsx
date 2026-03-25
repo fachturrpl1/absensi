@@ -92,6 +92,7 @@ export const groupsColumns: ColumnSkeletonDef[] = [
   { cell: "actions",  headClassName: "w-24 text-right pr-4",     cellClassName: "pr-4 text-right" },
 ]
 
+/** Kolom untuk grouop/[id table]**/
 export const groupMembersSkeletonColumns: ColumnSkeletonDef[] = [
   { cell: "avatar",  headClassName: "w-10 px-4",             cellClassName: "px-4 py-3" },
   { cell: "name",    headerWidth: "w-24",                     cellClassName: "py-3" },
@@ -154,7 +155,7 @@ export function TableSkeleton({ rows = 8, columns = 5 }: TableSkeletonProps) {
     <div className="w-full">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent border-b">
+          <TableRow className="border-b">
             {cols.map((col, i) => {
               const base = "font-semibold text-xs uppercase tracking-wide py-3"
               const hidden = col.hiddenMobile ? "hidden md:table-cell" : ""
@@ -177,7 +178,7 @@ export function TableSkeleton({ rows = 8, columns = 5 }: TableSkeletonProps) {
 
         <TableBody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <TableRow key={rowIndex} className="hover:bg-muted/50 transition-colors border-b last:border-0">
+            <TableRow key={rowIndex} className="transition-colors border-b last:border-0">
               {cols.map((col, colIndex) => {
                 const hidden = col.hiddenMobile ? "hidden md:table-cell" : ""
                 return (

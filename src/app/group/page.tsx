@@ -5,10 +5,10 @@ import { DataTable } from "@/components/tables/data-table"
 import { Button } from "@/components/ui/button"
 import { useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "next/navigation"
-import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet } from "lucide-react"
+import { Plus, Group as GroupIcon, Pencil, Trash, Search, RotateCcw, ChevronRight, FileSpreadsheet, X } from "lucide-react"
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia,
-} from "@/components/ui/empty"
+} from "@/components/ui/empty"  
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { IGroup } from "@/interface"
 import { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
-import { deleteGroup, createGroup, getAllGroups, updateGroup } from "@/action/group"
+import { deleteGroup, createGroup, getAllGroups, updateGroup } from "@/action/groups/group"
 import { getAllOrganization } from "@/action/organization"
 import { TableSkeleton, groupsColumns as groupsSkeletonColumns } from "@/components/skeleton/tables-loading"
 import { getCache, setCache } from "@/lib/local-cache"
@@ -28,6 +28,14 @@ import Link from "next/link"
 
 import { GroupFormDialog, GroupForm, groupSchema } from "@/components/groups/dialogs/form-dialog"
 import { GroupDeleteDialog } from "@/components/groups/dialogs/delete-dialog"
+
+// ─── Helper: slug untuk URL ───────────────────────────────────────────────────
+// Virtual "No Group" pakai id "no-group" sebagai slug khusus
+// Group biasa pakai code yang di-encode
+function getGroupSlug(group: IGroup): string {
+  if (group.id === "no-group") return "no-group"
+  return encodeURIComponent(group.code ?? group.id)
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -107,7 +115,7 @@ export default function GroupsPage() {
       const virtualNoGroup: IGroup = {
         id: "no-group",
         organization_id: String(organizationId),
-        code: "-",
+        code: "no-group",   // FIX: pakai "no-group" bukan "-" agar slug match dengan getGroupByCode
         name: "No Group",
         description: "Members without a group",
         is_active: true,
@@ -235,20 +243,27 @@ export default function GroupsPage() {
     {
       accessorKey: "code",
       header: "Code",
-      cell: ({ row }) => (
-        <Link href={`/group/${row.original.id}`} className="hover:underline text-sm">
-          {row.original.code}
-        </Link>
-      ),
+      cell: ({ row }) => {
+        const slug = getGroupSlug(row.original)
+        return (
+          <Link href={`/group/${slug}/members`} className="hover:underline text-sm font-mono">
+            {row.original.code}
+          </Link>
+        )
+      },
     },
     {
       accessorKey: "name",
       header: "Name",
-      cell: ({ row }) => (
-        <Link href={`/group/${row.original.id}`} className="hover:underline font-medium">
-          {row.original.name}
-        </Link>
-      ),
+      cell: ({ row }) => {
+        const slug = getGroupSlug(row.original)
+        return (
+          // FIX: tampilkan .name bukan .code
+          <Link href={`/group/${slug}/members`} className="hover:underline font-medium">
+            {row.original.name}
+          </Link>
+        )
+      },
     },
     {
       accessorKey: "description",
@@ -303,7 +318,7 @@ export default function GroupsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   if (!isHydrated) {
     return (
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="flex flex-col gap-4 p-4 pt-0">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Groups</h1>
         </div>
@@ -313,73 +328,88 @@ export default function GroupsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 w-full">
-      <div className="p-4 md:p-6 space-y-4">
+    <div className="flex flex-col gap-4 p-4 pt-0">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Groups</h1>
+        <Button size="sm" onClick={openAdd}>
+          <Plus className="h-4 w-4" /> Add Group
+        </Button>
+      </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Groups</h1>
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search groups..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-              <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/group/import">
-                <FileSpreadsheet className="mr-2 h-4 w-4" />Import
-              </Link>
-            </Button>
-            <Button size="sm" onClick={openAdd}>
-              Add <Plus className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div>
-          {loading ? (
-            <TableSkeleton rows={6} columns={groupsSkeletonColumns} />
-          ) : groups.length === 0 ? (
-            <div className="mt-20">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <GroupIcon className="h-14 w-14 text-muted-foreground mx-auto" />
-                  </EmptyMedia>
-                  <EmptyTitle>No groups yet</EmptyTitle>
-                  <EmptyDescription>
-                    There are no groups for this organization. Use the "Add" button to create one.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            </div>
-          ) : (
-            <DataTable columns={columns} data={filteredGroups} showColumnToggle={false} />
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search groups..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-8"
+            disabled={loading}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] h-9">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="h-9"
+          >
+            <RotateCcw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-9">
+            <Link href="/group/import">
+              <FileSpreadsheet className="mr-2 h-4 w-4" />Import
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {/* Content */}
+      <div>
+        {loading ? (
+          <TableSkeleton rows={6} columns={groupsSkeletonColumns} />
+        ) : groups.length === 0 ? (
+          <div className="py-20">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GroupIcon className="h-14 w-14 text-muted-foreground mx-auto" />
+                </EmptyMedia>
+                <EmptyTitle>No groups yet</EmptyTitle>
+                <EmptyDescription>
+                  {searchQuery ? `No groups found matching "${searchQuery}"` : "There are no groups for this organization."}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        ) : (
+          <DataTable columns={columns} data={filteredGroups} showColumnToggle={false} />
+        )}
+      </div>
+
 
       {/* Dialogs — di luar layout */}
       <GroupFormDialog

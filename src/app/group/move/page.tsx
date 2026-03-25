@@ -28,7 +28,7 @@ import { PlusCircle, Search, RotateCcw } from 'lucide-react'
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { useSearchParams, useRouter } from 'next/navigation'
-import { getGroupById, getAllGroups, createGroup } from '@/action/group'
+import { getGroupById, getAllGroups, createGroup } from '@/action/groups/group'
 import { createClient } from '@/utils/supabase/client'
 import { moveMembersToGroup } from '@/action/members'
 import { getCache, setCache } from '@/lib/local-cache'
@@ -447,55 +447,55 @@ export default function MoveGroupPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Move Members</h1>
       </div>
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            Move from
-            <Badge variant="outline">{group?.name || '...'}</Badge>
-            to
-          </div>
-          <Select value={targetGroupId} onValueChange={setTargetGroupId}>
-            <SelectTrigger className="w-full sm:w-[250px]">
-              <SelectValue placeholder="Select destination group" />
-            </SelectTrigger>
-            <SelectContent>
-              <div
-                className="flex items-center p-2 cursor-pointer hover:bg-accent"
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  setIsCreateModalOpen(true)
-                }}
-              >
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add New Group
-              </div>
-              {allGroups.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-            <AlertDialogTrigger asChild>
-              <Button
-                disabled={!targetGroupId || Object.keys(rowSelection).length === 0}
-              >
-                Move Selected ({Object.keys(rowSelection).length})
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Move</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to move {Object.keys(rowSelection).length} selected members to the "{allGroups.find(g => g.id === targetGroupId)?.name || ''}" group?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleMoveMembers}>Move</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          Move from
+          <Badge variant="outline">{group?.name || '...'}</Badge>
+          to
+        </div>
+        <Select value={targetGroupId} onValueChange={setTargetGroupId}>
+          <SelectTrigger className="w-full sm:w-[250px]">
+            <SelectValue placeholder="Select destination group" />
+          </SelectTrigger>
+          <SelectContent>
+            <div
+              className="flex items-center p-2 cursor-pointer hover:bg-accent"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setIsCreateModalOpen(true)
+              }}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add New Group
+            </div>
+            {allGroups.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+          <AlertDialogTrigger asChild>
+            <Button
+              disabled={!targetGroupId || Object.keys(rowSelection).length === 0}
+            >
+              Move Selected ({Object.keys(rowSelection).length})
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Move</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to move {Object.keys(rowSelection).length} selected members to the "{allGroups.find(g => g.id === targetGroupId)?.name || ''}" group?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMoveMembers}>Move</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between pt-4">
           <Button variant="outline" size="sm" onClick={fetchData} className="whitespace-nowrap">

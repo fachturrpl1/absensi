@@ -452,11 +452,11 @@ export function DataTable<TData, TValue>({
         </div>
       ) : (
         emptyState ? (
-          <div className="py-12 px-4">
+          <div className="px-4">
             {emptyState}
           </div>
         ) : (
-          <div className="py-10 px-4 text-center text-sm text-muted-foreground">
+          <div className="px-4 text-center text-sm text-muted-foreground">
             {isLoading ? "Loading..." : "No results."}
           </div>
         )
@@ -484,7 +484,7 @@ export function DataTable<TData, TValue>({
   })() : null
 
   return (
-    <div className="space-y-4">
+    <div>
       {layout === "card" ? (
         <>
           <div>

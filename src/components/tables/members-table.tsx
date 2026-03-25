@@ -85,7 +85,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
     <div className="w-full space-y-4">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent border-b border-border">
+          <TableRow className="border-b border-border">
             <TableHead className="w-10 px-4" />
             <TableHead className="font-medium text-xs uppercase tracking-wide py-3">Name</TableHead>
             <TableHead className="font-medium text-xs uppercase tracking-wide">Identification</TableHead>
@@ -119,7 +119,7 @@ export function MembersTable({ members, isLoading = false, onDelete, showPaginat
             return (
               <TableRow
                 key={member.id}
-                className="group cursor-pointer hover:bg-muted/50 transition-colors w-full"
+                className="group cursor-pointer transition-colors w-full"
                 onClick={() => router.push(`/members/${member.id}`)}
               >
                 {/* Avatar */}

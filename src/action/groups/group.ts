@@ -185,3 +185,44 @@ export const deleteGroup = async (groupId: string | number) => {
   }
   return { success: true, message: "Deleted successfully", data: data as IGroup };
 };
+
+/**
+ * Resolve group by code + organizationId.
+ * code adalah unique per organization (bukan globally unique).
+ * Dipakai untuk resolve slug /group/[code]/members → departments.id
+ */
+export const getGroupByCode = async (
+  code: string,
+  organizationId: string | number
+): Promise<{ success: boolean; data: IGroup | null; message?: string }> => {
+  // Virtual group — tidak ada di DB
+  if (code === "no-group") {
+    return {
+      success: true,
+      data: {
+        id: "no-group",
+        code: "no-group",
+        name: "No Group",
+        description: "Members without a group",
+        is_active: true,
+        organization_id: String(organizationId),
+        created_at: new Date().toISOString(),
+      } as IGroup,
+    }
+  }
+
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("departments")
+    .select("id, code, name, description, is_active, created_at, organization_id")
+    .eq("code", code)
+    .eq("organization_id", organizationId)
+    .single()
+
+  if (error) {
+    return { success: false, data: null, message: error.message }
+  }
+
+  return { success: true, data: data as IGroup }
+}

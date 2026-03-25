@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { deleteGroup } from "@/action/group"
+import { deleteGroup } from "@/action/groups/group"
 import { toast } from "sonner"
 
 interface GroupsTableProps {
