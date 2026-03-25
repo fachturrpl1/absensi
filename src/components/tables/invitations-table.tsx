@@ -11,7 +11,8 @@ import {
     Trash,
     Clock,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Users // ← untuk avatar fallback
 } from "lucide-react";
 import {
     AlertDialog,
@@ -22,9 +23,17 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { resendInvitation, cancelInvitation, deleteInvitation } from "@/action/invitations";
-// import { useRouter } from "next/navigation";
 
 interface InvitationsTableProps {
     invitations: IMemberInvitation[];
@@ -82,10 +91,10 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
 
     const getStatusBadge = (status: string) => {
         const variants = {
-            pending: { icon: Clock, color: "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-200 dark:hover:bg-yellow-900/30" },
-            accepted: { icon: CheckCircle2, color: "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/30" },
-            expired: { icon: XCircle, color: "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/30" },
-            cancelled: { icon: Ban, color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700" },
+            pending: { icon: Clock, color: "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400" },
+            accepted: { icon: CheckCircle2, color: "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-400" },
+            expired: { icon: XCircle, color: "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400" },
+            cancelled: { icon: Ban, color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300" },
         } as const;
 
         type StatusKey = keyof typeof variants;
@@ -93,7 +102,7 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
         const Icon = variant.icon;
 
         return (
-            <Badge className={`${variant.color} border-0 flex w-fit items-center gap-1`}>
+            <Badge className={`${variant.color} border-0 flex w-fit items-center gap-1 text-xs`}>
                 <Icon className="h-3 w-3" />
                 <span className="capitalize">{status}</span>
             </Badge>
@@ -101,135 +110,159 @@ export function InvitationsTable({ invitations, isLoading = false, onUpdate }: I
     };
 
     return (
-        <div className="w-full">
-            <style jsx global>{`
-        html body .custom-hover-row:hover,
-        html body .custom-hover-row:hover > td {
-          background-color: #d1d5db !important; /* dark gray hover */
-        }
-        html body.dark .custom-hover-row:hover,
-        html body.dark .custom-hover-row:hover > td {
-          background-color: #374151 !important;
-        }
-      `}</style>
-            <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-transparent border-b">
-                        <tr>
-                            <th className="p-3 w-8">
-                                <input type="checkbox" className="rounded border-gray-300" />
-                            </th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Member</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Role</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Teams</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Projects</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Payment</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Weekly limit</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100">Status</th>
-                            <th className="p-3 font-medium text-gray-900 dark:text-gray-100 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {isLoading ? (
-                            <tr>
-                                <td colSpan={9} className="p-4 text-center text-muted-foreground">
-                                    Loading invitations...
-                                </td>
-                            </tr>
-                        ) : invitations.length === 0 ? (
-                            <tr>
-                                <td colSpan={9} className="p-8 text-center text-muted-foreground border-b-0">
-                                    <div className="flex flex-col items-start gap-2">
-                                        <span className="text-lg font-medium text-gray-500">No invitations</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        ) : (
-                            invitations.map((invitation) => (
-                                <tr key={invitation.id} className="border-b transition-colors hover:bg-muted/50">
-                                    <td className="p-3">
+        <div className="w-full space-y-4">
+            <Table>
+                <TableHeader>
+                    <TableRow className="border-b border-border">
+                        <TableHead className="w-10 px-4" />
+                        <TableHead className="font-medium text-xs uppercase tracking-wide py-3">Member</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide">Role</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide">Teams</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">Projects</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">Payment</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide">Weekly limit</TableHead>
+                        <TableHead className="font-medium text-xs uppercase tracking-wide">Status</TableHead>
+                        <TableHead className="w-20 text-right pr-6 font-medium text-xs uppercase tracking-wide">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading ? (
+                        <TableRow>
+                            <TableCell colSpan={9} className="h-32 text-center text-muted-foreground italic text-sm">
+                                Loading invitations...
+                            </TableCell>
+                        </TableRow>
+                    ) : invitations.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground py-6">
+                                No invitations found.
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        invitations.map((invitation) => {
+                            const email = invitation.email;
+                            const emailInitials = email.substring(0, 2).toUpperCase();
+
+                            return (
+                                <TableRow
+                                    key={invitation.id}
+                                    className="group cursor-pointer transition-colors w-full hover:bg-muted/50"
+                                >
+                                    {/* Checkbox */}
+                                    <TableCell className="px-4 py-3" onClick={e => e.stopPropagation()}>
                                         <input type="checkbox" className="rounded border-gray-300" />
-                                    </td>
-                                    <td className="p-3">
+                                    </TableCell>
+
+                                    {/* Member - Avatar + Email */}
+                                    <TableCell className="py-3">
                                         <div className="flex items-center gap-2">
-                                            {/* Avatar placeholder if needed, or just email */}
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-300 font-medium text-xs">
-                                                {invitation.email.substring(0, 2).toUpperCase()}
+                                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-medium text-xs">
+                                                {emailInitials}
                                             </div>
-                                            <span className="font-medium text-gray-900 dark:text-gray-100">{invitation.email}</span>
+                                            <span className="font-medium text-sm block truncate max-w-[200px]">
+                                                {email}
+                                            </span>
                                         </div>
-                                    </td>
-                                    <td className="p-3">
-                                        {(invitation as any).role?.name || "-"}
-                                    </td>
-                                    <td className="p-3">
-                                        {(invitation as any).departments?.name || (invitation as any).department?.name || "-"}
-                                    </td>
-                                    <td className="p-3 text-muted-foreground">-</td>
-                                    <td className="p-3 text-muted-foreground">-</td>
-                                    <td className="p-3 text-muted-foreground">-</td>
-                                    <td className="p-3">{getStatusBadge(invitation.status)}</td>
-                                    <td className="p-3 text-right">
+                                    </TableCell>
+
+                                    {/* Role */}
+                                    <TableCell className="text-sm text-muted-foreground">
+                                        {(invitation as any).role?.name || <span className="text-muted-foreground/50">—</span>}
+                                    </TableCell>
+
+                                    {/* Teams */}
+                                    <TableCell>
+                                        {(invitation as any).departments?.name || (invitation as any).department?.name ? (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-muted text-muted-foreground">
+                                                {(invitation as any).departments?.name || (invitation as any).department?.name}
+                                            </span>
+                                        ) : (
+                                            <span className="text-muted-foreground/50 text-sm">—</span>
+                                        )}
+                                    </TableCell>
+
+                                    {/* Projects */}
+                                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                        <span className="text-muted-foreground/50">—</span>
+                                    </TableCell>
+
+                                    {/* Payment */}
+                                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                                        <span className="text-muted-foreground/50">—</span>
+                                    </TableCell>
+
+                                    {/* Weekly limit */}
+                                    <TableCell className="text-sm text-muted-foreground">
+                                        <span className="text-muted-foreground/50">—</span>
+                                    </TableCell>
+
+                                    {/* Status */}
+                                    <TableCell>
+                                        {getStatusBadge(invitation.status)}
+                                    </TableCell>
+
+                                    {/* Actions */}
+                                    <TableCell className="px-4 pr-6 text-right" onClick={e => e.stopPropagation()}>
                                         <div className="flex justify-end gap-1">
                                             {(invitation.status === "pending" || invitation.status === "expired") && (
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 hover:bg-muted"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0"
                                                     onClick={() => handleResend(invitation.id)}
                                                     title="Resend"
                                                 >
-                                                    <Send className="h-4 w-4" />
+                                                    <Send className="w-3.5 h-3.5" />
                                                 </Button>
                                             )}
                                             {invitation.status === "pending" && (
                                                 <Button
                                                     variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 hover:bg-muted"
+                                                    size="sm"
+                                                    className="h-8 w-8 p-0"
                                                     onClick={() => handleCancel(invitation.id)}
                                                     title="Cancel"
                                                 >
-                                                    <Ban className="h-4 w-4" />
+                                                    <Ban className="w-3.5 h-3.5" />
                                                 </Button>
                                             )}
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => setDeleteId(invitation.id)}
-                                                title="Delete"
-                                            >
-                                                <Trash className="h-4 w-4" />
-                                            </Button>
+                                            <AlertDialog open={deleteId === invitation.id} onOpenChange={(open) => !open && setDeleteId(null)}>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-destructive hover:bg-red-50 hover:border-red-200"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash className="w-3.5 h-3.5" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Are you sure you want to delete this invitation? This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                                            onClick={handleDelete}
+                                                        >
+                                                            Delete
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Invitation</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete this invitation? This action cannot be undone.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={handleDelete}
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            );
+                        })
+                    )}
+                </TableBody>
+            </Table>
         </div>
     );
 }

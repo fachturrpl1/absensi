@@ -779,7 +779,7 @@ export default function MembersPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100">
+          <div>
             <InvitationsTable
               invitations={invitationsResult?.data?.filter((inv: any) =>
                 inviteSearchQuery ?
