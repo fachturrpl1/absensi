@@ -1,6 +1,4 @@
 // Consolidated Dummy Data
-import * as LucideIcons from 'lucide-react'
-
 // ============================================================================
 // ORGANIZATIONS
 // ============================================================================
@@ -900,13 +898,18 @@ export const DUMMY_BEHAVIOR_CHANGES: BehaviorChange[] = [
     }
 ]
 
+type LucideIconName = 
+    | 'TrendingUp' | 'TrendingDown' | 'Clock' | 'BarChart3' 
+    | 'Briefcase' | 'AlertTriangle' | 'Share2' | 'Package' 
+    | 'Bot' | 'Film' | 'Pause' | 'Hand'
+
 export interface NotificationTemplate {
     id: string
     name: string
     description: string
     frequency: 'hourly' | 'daily' | 'weekly'
     delivery: ('email' | 'insights' | 'slack')[]
-    iconName: keyof typeof LucideIcons
+    iconName: LucideIconName
     color: string
     metric: string
     condition: string

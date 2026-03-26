@@ -198,28 +198,52 @@ export function useOrgSettings() {
         }
       }
 
+      return {
+        ...data,
+        normalizedState,
+        normalizedCity,
+        industryArray,
+      };
+    },
+    enabled: !!orgStore.organizationId,
+    staleTime: 1000 * 60 * 5, // 5 menit
+  });
+
+  // ----------------------------------------------------------
+  // Reactive Sync: Populate formData when orgData loads
+  // ----------------------------------------------------------
+  const lastInitializedOrgId = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!orgData || !orgStore.organizationId) return;
+
+    // Only populate if it's a new organization, to avoid overwriting user edits
+    // on background refetch of the same organization.
+    if (lastInitializedOrgId.current !== orgStore.organizationId) {
+      console.log(`[useOrgSettings] Initializing formData for org: ${orgStore.organizationId}`);
+      
+      const data = orgData as any; // typed in queryFn above
+      
       setFormData({
         name: data.name || "",
-        description: (data as any).description || "",
+        description: data.description || "",
         address: data.address || "",
-        city: normalizedCity || (data.city ?? ""),
-        state_province: normalizedState || (data.state_province ?? ""),
+        city: data.normalizedCity || (data.city ?? ""),
+        state_province: data.normalizedState || (data.state_province ?? ""),
         postal_code: data.postal_code || "",
         phone: data.phone || "",
         website: data.website || "",
         email: data.email || "",
         timezone: data.timezone || "UTC",
         currency_code: data.currency_code || "USD",
-        country_code: countryCode,
-        industry: industryArray,
+        country_code: (data.country_code || "ID").toUpperCase(),
+        industry: data.industryArray || [],
         time_format: data.time_format || "24h",
       });
 
-      return data;
-    },
-    enabled: !!orgStore.organizationId,
-    staleTime: 1000 * 60 * 5, // 5 menit
-  });
+      lastInitializedOrgId.current = orgStore.organizationId;
+    }
+  }, [orgData, orgStore.organizationId]);
 
   // ----------------------------------------------------------
   // Derived geo values untuk UI

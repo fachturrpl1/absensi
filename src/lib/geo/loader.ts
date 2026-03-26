@@ -123,8 +123,8 @@ export const loadGeoCountry = async (code: string): Promise<GeoCountry | null> =
   if (isLocalSupported) {
     try {
       console.log(`[geo/loader] Loading local JSON for ${key}`);
-      const module = await import(`@/lib/data/geo/${key}.json`);
-      const localData = module.default || module;
+      const importedModule = await import(`@/lib/data/geo/${key}.json`);
+      const localData = importedModule.default || importedModule;
 
       if (localData && localData.states) {
         const data: GeoCountry = {
