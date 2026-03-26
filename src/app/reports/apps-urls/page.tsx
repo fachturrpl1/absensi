@@ -11,7 +11,8 @@ import { exportToCSV, generateFilename, type ExportColumn } from "@/lib/export-u
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Download } from "lucide-react"
-import { getAppsReportData, getUrlsReportData, ReportQueryParams } from "@/action/reports-activity"
+import { ActivityTable, type ColumnDef } from "@/components/insights/ActivityTable"
+
 import { getAllOrganization_member } from "@/action/members"
 import { useOrgStore } from "@/store/org-store"
 
@@ -64,24 +65,41 @@ export default function AppsUrlsPage() {
 
         setIsLoading(true)
 
-        const params: ReportQueryParams = {
-            organizationId: organizationId as string,
-            memberId: selectedFilter.id,
-            startDate: dateRange.startDate ? format(dateRange.startDate, 'yyyy-MM-dd') : undefined,
-            endDate: dateRange.endDate ? format(dateRange.endDate, 'yyyy-MM-dd') : undefined
+        const buildParams = (type: 'apps' | 'urls') => {
+            const p = new URLSearchParams()
+            p.set('type', type)
+            p.set('organizationId', organizationId as string)
+            if (selectedFilter.id) p.set('memberId', selectedFilter.id as string)
+            if (dateRange.startDate) p.set('startDate', format(dateRange.startDate, 'yyyy-MM-dd'))
+            if (dateRange.endDate) p.set('endDate', format(dateRange.endDate, 'yyyy-MM-dd'))
+            return p.toString()
         }
 
         try {
+            const fetchJson = async (url: string) => {
+                const res = await fetch(url)
+                if (!res.ok) {
+                    const text = await res.text()
+                    console.error(`[apps-url] HTTP ${res.status}:`, text)
+                    throw new Error(`HTTP ${res.status}: ${text}`)
+                }
+                return res.json()
+            }
+
             const [appsRes, urlsRes] = await Promise.all([
-                getAppsReportData(params),
-                getUrlsReportData(params)
+                fetchJson(`/api/reports/apps-url?${buildParams('apps')}`),
+                fetchJson(`/api/reports/apps-url?${buildParams('urls')}`)
             ])
 
             if (appsRes.success) setAppsData(appsRes.data || [])
+            else console.error('[apps-url] apps error:', appsRes.message)
+
             if (urlsRes.success) setUrlsData(urlsRes.data || [])
+            else console.error('[apps-url] urls error:', urlsRes.message)
 
         } catch (err: any) {
-            toast.error("Failed to load report data")
+            console.error('[apps-url] fetch error:', err)
+            toast.error(`Failed to load report data: ${err.message}`)
         } finally {
             setIsLoading(false)
         }
@@ -92,17 +110,21 @@ export default function AppsUrlsPage() {
         loadData()
     }, [loadData])
 
-    // Summary calculations
+    // Summary calculations (isProductive normalized: 'core-work' | 'non-core-work' | 'unproductive')
     const appsSummary = useMemo(() => {
         const totalTime = appsData.reduce((sum, app) => sum + (app.timeSpent || 0), 0)
-        const uniqueApps = new Set(appsData.map(a => a.name)).size
-        return { totalTime, uniqueApps }
+        const coreTime = appsData.filter(a => a.isProductive === 'core-work').reduce((sum, a) => sum + (a.timeSpent || 0), 0)
+        const nonCoreTime = appsData.filter(a => a.isProductive === 'non-core-work').reduce((sum, a) => sum + (a.timeSpent || 0), 0)
+        const unproductiveTime = appsData.filter(a => a.isProductive === 'unproductive').reduce((sum, a) => sum + (a.timeSpent || 0), 0)
+        return { totalTime, coreTime, nonCoreTime, unproductiveTime }
     }, [appsData])
 
     const urlsSummary = useMemo(() => {
         const totalTime = urlsData.reduce((sum, url) => sum + (url.timeSpent || 0), 0)
-        const uniqueSites = new Set(urlsData.map(u => u.site)).size
-        return { totalTime, uniqueSites }
+        const coreTime = urlsData.filter(u => u.isProductive === 'core-work').reduce((sum, u) => sum + (u.timeSpent || 0), 0)
+        const nonCoreTime = urlsData.filter(u => u.isProductive === 'non-core-work').reduce((sum, u) => sum + (u.timeSpent || 0), 0)
+        const unproductiveTime = urlsData.filter(u => u.isProductive === 'unproductive').reduce((sum, u) => sum + (u.timeSpent || 0), 0)
+        return { totalTime, coreTime, nonCoreTime, unproductiveTime }
     }, [urlsData])
 
     const formatMinutes = (mins: number) => {
@@ -110,6 +132,38 @@ export default function AppsUrlsPage() {
         const minutes = Math.floor(mins % 60)
         return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
     }
+
+    const appsColumns: ColumnDef<any>[] = [
+        { header: 'Application', accessorKey: 'name', className: 'font-medium' },
+        { 
+            header: 'Category', 
+            cell: (row) => <span className={`p-4 ${row.isProductive} ? `}>{row.category}</span>
+        },
+        { header: 'Project', accessorKey: 'projectName' },
+        { header: 'Member', accessorKey: 'memberName' },
+        { header: 'Date', accessorKey: 'date' },
+        { 
+            header: 'Time Spent', 
+            className: 'text-right font-medium',
+            cell: (row) => formatMinutes(row.timeSpent)
+        }
+    ]
+
+    const urlsColumns: ColumnDef<any>[] = [
+        { 
+            header: 'Website', 
+            className: 'font-medium',
+            cell: (row) => <span title={row.title}>{row.site}</span>
+        },
+        { header: 'Project', accessorKey: 'projectName' },
+        { header: 'Member', accessorKey: 'memberName' },
+        { header: 'Date', accessorKey: 'date' },
+        { 
+            header: 'Time Spent', 
+            className: 'text-right font-medium',
+            cell: (row) => formatMinutes(row.timeSpent)
+        }
+    ]
 
     const currentData = activeTab === 'apps' ? appsData : urlsData
     const paginatedData = currentData.slice((page - 1) * pageSize, page * pageSize)
@@ -182,122 +236,51 @@ export default function AppsUrlsPage() {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x">
+                    <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x">
                         <div className="p-4">
-                            <p className="text-sm font-medium text-gray-500">Total Time Spent</p>
-                            <p className="text-2xl font-bold text-gray-900">
+                            <p className="text-sm font-medium">Total Time Spent</p>
+                            <p className="text-2xl font-bold">
                                 {formatMinutes(activeTab === 'apps' ? appsSummary.totalTime : urlsSummary.totalTime)}
                             </p>
                         </div>
                         <div className="p-4">
-                            <p className="text-sm font-medium text-gray-500">
-                                Unique {activeTab === 'apps' ? 'Applications' : 'Sites'}
-                            </p>
-                            <p className="text-2xl font-bold text-gray-900">
-                                {activeTab === 'apps' ? appsSummary.uniqueApps : urlsSummary.uniqueSites}
+                            <p className="text-sm font-medium">Core</p>
+                            <p className="text-2xl font-bold">
+                                {formatMinutes(activeTab === 'apps' ? appsSummary.coreTime : urlsSummary.coreTime)}
                             </p>
                         </div>
                         <div className="p-4">
-                            <p className="text-sm font-medium text-gray-500">Records</p>
-                            <p className="text-2xl font-bold text-gray-900">{currentData.length}</p>
+                            <p className="text-sm font-medium">Non-Core</p>
+                            <p className="text-2xl font-bold">
+                                {formatMinutes(activeTab === 'apps' ? appsSummary.nonCoreTime : urlsSummary.nonCoreTime)}
+                            </p>
+                        </div>
+                        <div className="p-4">
+                            <p className="text-sm font-medium">Unproductive</p>
+                            <p className="text-2xl font-bold">
+                                {formatMinutes(activeTab === 'apps' ? appsSummary.unproductiveTime : urlsSummary.unproductiveTime)}
+                            </p>
                         </div>
                     </div>
 
                     <TabsContent value="apps" className="m-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-t border-b border-gray-200 dark:border-gray-800">
-                                    <tr>
-                                        <th className="p-4">Application</th>
-                                        <th className="p-4">Category</th>
-                                        <th className="p-4">Project</th>
-                                        <th className="p-4">Member</th>
-                                        <th className="p-4">Date</th>
-                                        <th className="p-4 text-right">Time Spent</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                    {paginatedData.map((app, idx) => (
-                                        <tr
-                                            key={`${app.memberId}-${app.name}-${app.id}-${idx}`}
-                                            className={`transition-colors hover:bg-gray-300 ${idx % 2 === 1 ? 'bg-slate-100' : 'bg-white'}`}
-                                        >
-                                            <td className="p-4 font-medium text-gray-900">{app.name}</td>
-                                            <td className="p-4">
-                                                <span className={`p-4 text-gray-600 ${app.isProductive} ? `}>
-                                                    {app.category}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-gray-600">{app.projectName}</td>
-                                            <td className="p-4 text-gray-600">{app.memberName}</td>
-                                            <td className="p-4 text-gray-600">{app.date}</td>
-                                            <td className="p-4 text-right font-medium">{formatMinutes(app.timeSpent)}</td>
-                                            <td className="p-4 text-right text-gray-600">
-
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {paginatedData.length === 0 && !isLoading && (
-                                        <tr>
-                                            <td colSpan={7} className="p-8 text-center text-gray-500">
-                                                No activity data found
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {isLoading && (
-                                        <tr>
-                                            <td colSpan={7} className="p-8 text-center text-gray-900 animate-pulse font-medium">
-                                                Loading application data...
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        <ActivityTable 
+                            data={paginatedData} 
+                            columns={appsColumns} 
+                            isLoading={isLoading} 
+                            emptyMessage="No activity data found" 
+                            loadingMessage="Loading application data..."
+                        />
                     </TabsContent>
 
                     <TabsContent value="urls" className="m-0">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-medium border-t border-b border-gray-200 dark:border-gray-800">
-                                    <tr>
-                                        <th className="p-4">Website</th>
-                                        <th className="p-4">Project</th>
-                                        <th className="p-4">Member</th>
-                                        <th className="p-4">Date</th>
-                                        <th className="p-4 text-right">Time Spent</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                                    {paginatedData.map((url, idx) => (
-                                        <tr
-                                            key={`${url.id}-${idx}`}
-                                            className={`transition-colors hover:bg-gray-300 ${idx % 2 === 1 ? 'bg-slate-100' : 'bg-white'}`}
-                                        >
-                                            <td className="p-4 font-medium text-gray-900" title={url.title}>{url.site}</td>
-                                            <td className="p-4 text-gray-600">{url.projectName}</td>
-                                            <td className="p-4 text-gray-600">{url.memberName}</td>
-                                            <td className="p-4 text-gray-600">{url.date}</td>
-                                            <td className="p-4 text-right font-medium">{formatMinutes(url.timeSpent)}</td>
-                                        </tr>
-                                    ))}
-                                    {paginatedData.length === 0 && !isLoading && (
-                                        <tr>
-                                            <td colSpan={5} className="p-8 text-center text-gray-500">
-                                                No website activity data found
-                                            </td>
-                                        </tr>
-                                    )}
-                                    {isLoading && (
-                                        <tr>
-                                            <td colSpan={5} className="p-8 text-center text-gray-900 animate-pulse font-medium">
-                                                Loading website data...
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        <ActivityTable 
+                            data={paginatedData} 
+                            columns={urlsColumns} 
+                            isLoading={isLoading} 
+                            emptyMessage="No website activity data found" 
+                            loadingMessage="Loading website data..."
+                        />
                     </TabsContent>
                 </Tabs>
             </div>
