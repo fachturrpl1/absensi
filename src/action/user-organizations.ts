@@ -22,7 +22,8 @@ export async function getUserOrganizations(userId: string): Promise<UserOrganiza
         organization_id,
         organization:organizations (
           id,
-          name
+          name,
+          logo_url
         ),
         organization_member_roles (
           system_roles (
@@ -58,16 +59,16 @@ export async function getUserOrganizations(userId: string): Promise<UserOrganiza
             .filter(Boolean);
 
         // Fallback: ambil langsung dari tabel organizations untuk yang missing
-        const orgNameMap: Record<number, string> = {};
+        const orgInfoMap: Record<number, { name: string, logo_url: string | null }> = {};
         if (missingOrgIds.length > 0) {
             const { data: orgsData } = await supabase
                 .from("organizations")
-                .select("id, name")
+                .select("id, name, logo_url")
                 .in("id", missingOrgIds);
 
             if (orgsData) {
                 for (const org of orgsData) {
-                    orgNameMap[org.id] = org.name;
+                    orgInfoMap[org.id] = { name: org.name, logo_url: org.logo_url };
                 }
             }
         }
@@ -86,12 +87,14 @@ export async function getUserOrganizations(userId: string): Promise<UserOrganiza
             // Handle both array and object response from Supabase join
             const org = Array.isArray(item.organization) ? item.organization[0] : item.organization;
             // Gunakan join result, fallback ke query langsung, fallback ke "Unknown Organization"
-            const orgName = org?.name || orgNameMap[item.organization_id] || "Unknown Organization";
+            const orgName = org?.name || orgInfoMap[item.organization_id]?.name || "Unknown Organization";
+            const logoUrl = org?.logo_url || orgInfoMap[item.organization_id]?.logo_url || null;
 
             return {
                 id: item.id,
                 organization_id: item.organization_id,
                 organization_name: orgName,
+                logo_url: logoUrl,
                 roles,
             };
         });

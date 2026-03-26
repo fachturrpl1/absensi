@@ -22,7 +22,7 @@ import type {
 } from "@/types/organization/org-settings";
 
 import { DEFAULT_FORM_DATA } from "@/types/organization/org-settings";
-import { findIndustryValue } from "@/lib/constants/industries";
+
 
 // ----------------------------------------------------------
 // Geo helpers (tidak expose keluar — internal hook saja)
@@ -63,6 +63,13 @@ function normalizeCityValue(
     (c) => c.value.toLowerCase() === normalized || c.label.toLowerCase() === normalized,
   );
   return match?.value ?? "";
+}
+
+// ----------------------------------------------------------
+// Validation helpers
+// ----------------------------------------------------------
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // ----------------------------------------------------------
@@ -169,12 +176,34 @@ export function useOrgSettings() {
       const normalizedState = normalizeStateValue(geo, data.state_province ?? null);
       const normalizedCity = normalizeCityValue(geo, data.city ?? null, normalizedState);
 
+      // Transform Industry: handle JSON string, comma-separated string, or null
+      let industryArray: string[] = [];
+      const rawIndustry = (data as any).industry;
+      if (rawIndustry) {
+        try {
+          // Coba parse sebagai JSON (array)
+          const parsed = JSON.parse(rawIndustry);
+          if (Array.isArray(parsed)) {
+            industryArray = parsed;
+          } else {
+            industryArray = [String(parsed)];
+          }
+        } catch {
+          // Jika bukan JSON, cek apakah comma-separated
+          if (String(rawIndustry).includes(",")) {
+            industryArray = String(rawIndustry).split(",").map(i => i.trim());
+          } else {
+            industryArray = [String(rawIndustry)];
+          }
+        }
+      }
+
       setFormData({
         name: data.name || "",
         description: (data as any).description || "",
         address: data.address || "",
-        city: normalizedCity,
-        state_province: normalizedState,
+        city: normalizedCity || (data.city ?? ""),
+        state_province: normalizedState || (data.state_province ?? ""),
         postal_code: data.postal_code || "",
         phone: data.phone || "",
         website: data.website || "",
@@ -182,7 +211,7 @@ export function useOrgSettings() {
         timezone: data.timezone || "UTC",
         currency_code: data.currency_code || "USD",
         country_code: countryCode,
-        industry: findIndustryValue((data as any).industry),
+        industry: industryArray,
         time_format: data.time_format || "24h",
       });
 
@@ -268,21 +297,40 @@ export function useOrgSettings() {
           if (!looksLikeValue) resolvedStateLabel = formData.state_province;
         }
 
+        // Sanitize fields: trim and convert empty string to null
+        const sanitize = (val: string | null | undefined) => {
+          if (val === null || val === undefined) return null;
+          const trimmed = val.trim();
+          return trimmed === "" ? null : trimmed;
+        };
+
+        const emailToSave = sanitize(formData.email);
+        const websiteToSave = sanitize(formData.website);
+        const phoneToSave = sanitize(formData.phone);
+        const addressToSave = sanitize(formData.address);
+
+        // Client-side validation: if email is provided, it must be valid
+        if (emailToSave && !isValidEmail(emailToSave)) {
+          toast.error("Please enter a valid email address");
+          setSaving(false);
+          return false;
+        }
+
         const payload: OrganizationUpdatePayload = {
           name: formData.name,
           legal_name: formData.name,
           description: formData.description,
-          address: formData.address,
+          address: addressToSave,
           city: resolvedCityLabel,
           state_province: resolvedStateLabel,
           postal_code: formData.postal_code,
-          phone: formData.phone,
-          website: formData.website,
-          email: formData.email,
+          phone: phoneToSave,
+          website: websiteToSave,
+          email: emailToSave,
           timezone: formData.timezone,
           currency_code: formData.currency_code,
           country_code: formData.country_code,
-          industry: formData.industry,
+          industry: JSON.stringify(formData.industry), // Simpan sebagai JSON string
           logo_url: logoUrl,
           time_format: formData.time_format,
         };

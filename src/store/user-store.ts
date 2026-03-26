@@ -9,6 +9,7 @@ export interface UserOrganization {
   id: number
   organization_id: number
   organization_name: string
+  logo_url: string | null
   roles: Role[]
 }
 
