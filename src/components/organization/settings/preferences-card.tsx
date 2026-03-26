@@ -99,7 +99,10 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                   variant="outline"
                   role="combobox"
                   aria-expanded={tzPopoverOpen}
-                  className="w-full justify-between h-10 font-normal"
+                  className={cn(
+                    "w-full md:w-1/4 justify-between h-10 font-normal",
+                    "min-w-fit flex-shrink-0"
+                  )}
                 >
                   <span className="truncate">
                     {timezones?.find((tz) => tz.value === formData.timezone)?.label || "Select timezone..."}
@@ -158,7 +161,10 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                   variant="outline"
                   role="combobox"
                   aria-expanded={curPopoverOpen}
-                  className="w-full justify-between h-10 font-normal"
+                  className={cn(
+                    "w-full md:w-1/4 justify-between h-10 font-normal",
+                    "min-w-fit flex-shrink-0"
+                  )}
                 >
                   <span className="truncate">
                     {currencies?.find((cur) => cur.code === formData.currency_code)?.label || "Select currency..."}

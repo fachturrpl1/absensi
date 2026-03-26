@@ -28,8 +28,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Building2, Check, ChevronsUpDown } from "@/components/icons/lucide-exports";
+import { Building2, Check, ChevronsUpDown, X } from "@/components/icons/lucide-exports";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 import { LogoUploader } from "./logo-upload";
 import { INDUSTRY_OPTIONS } from "@/lib/constants/industries";
@@ -109,9 +110,9 @@ export function BasicInfoCard({
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label htmlFor="org-industry" className="text-sm font-medium">
-            Industry
+            Industry (Max 10)
           </Label>
           <Popover open={industryPopoverOpen} onOpenChange={setIndustryPopoverOpen}>
             <PopoverTrigger asChild>
@@ -120,10 +121,9 @@ export function BasicInfoCard({
                 role="combobox"
                 aria-expanded={industryPopoverOpen}
                 className="w-full justify-between h-10 font-normal"
+                disabled={formData.industry.length >= 10 && !industryPopoverOpen}
               >
-                <span className="truncate">
-                  {INDUSTRY_OPTIONS.find((opt) => opt.value === formData.industry)?.label || "Select industry..."}
-                </span>
+                <span className="text-muted-foreground">Select industries...</span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -133,29 +133,68 @@ export function BasicInfoCard({
                 <CommandEmpty>No industry found.</CommandEmpty>
                 <CommandList className="max-h-72">
                   <CommandGroup>
-                    {INDUSTRY_OPTIONS.map((option) => (
-                      <CommandItem
-                        key={option.value}
-                        value={option.value}
-                        onSelect={() => {
-                          onChange({ industry: option.value });
-                          setIndustryPopoverOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            formData.industry === option.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {option.label}
-                      </CommandItem>
-                    ))}
+                    {INDUSTRY_OPTIONS.map((option) => {
+                      const isSelected = formData.industry.includes(option.value);
+                      return (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          disabled={!isSelected && formData.industry.length >= 10}
+                          onSelect={() => {
+                            const newIndustries = isSelected
+                              ? formData.industry.filter((i) => i !== option.value)
+                              : [...formData.industry, option.value];
+                            
+                            if (newIndustries.length <= 10) {
+                              onChange({ industry: newIndustries });
+                            }
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              isSelected ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {option.label}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
+
+          {/* Selected Industries Badges */}
+          {formData.industry.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {formData.industry.map((val) => {
+                const option = INDUSTRY_OPTIONS.find((opt) => opt.value === val);
+                if (!option) return null;
+                return (
+                  <Badge
+                    key={val}
+                    variant="secondary"
+                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs"
+                  >
+                    {option.label}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange({
+                          industry: formData.industry.filter((i) => i !== val),
+                        });
+                      }}
+                      className="rounded-full hover:bg-muted p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -47,7 +47,7 @@ export interface OrgSettingsFormData {
   timezone: string;
   currency_code: string;
   country_code: string;
-  industry: string;
+  industry: string[];
   time_format: "12h" | "24h";
 }
 
@@ -64,7 +64,7 @@ export const DEFAULT_FORM_DATA: OrgSettingsFormData = {
   timezone: "UTC",
   currency_code: "USD",
   country_code: "ID",
-  industry: "",
+  industry: [],
   time_format: "24h",
 };
 
@@ -75,17 +75,17 @@ export interface OrganizationUpdatePayload {
   name: string;
   legal_name: string;
   description: string;
-  address: string;
+  address: string | null;
   city: string;
   state_province: string;
   postal_code: string;
-  phone: string;
-  website: string;
-  email: string;
+  phone: string | null;
+  website: string | null;
+  email: string | null;
   timezone: string;
   currency_code: string;
   country_code: string;
-  industry: string;
+  industry: string[] | string | null;
   logo_url: string | null | undefined;
   time_format: "12h" | "24h";
 }
