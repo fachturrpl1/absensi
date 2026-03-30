@@ -138,7 +138,7 @@ export default function SettingsPage() {
             onClick={onSave}
             disabled={saving}
             size="lg"
-            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold bg-black text-white hover:bg-black/90 disabled:opacity-60"
+            className="min-w-[160px] gap-2 px-6 py-3 text-base font-semibold disabled:opacity-60 hover:cursor-pointer"
           >
             {saving ? (
               <>
