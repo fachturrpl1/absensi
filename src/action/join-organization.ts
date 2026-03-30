@@ -231,8 +231,8 @@ export async function getJoinRequests(
 
         const reviewer = await getReviewerInfo(user.id, organizationId, admin);
         if (!reviewer) return { success: false, message: "You are not a member of any organization." };
-        if (!["owner", "admin", "A001", "SA001"].includes(reviewer.roleCode ?? "")) {
-            return { success: false, message: "Only admins can view join requests." };
+        if (reviewer.roleCode !== "owner") {
+            return { success: false, message: "Only owners can view join requests." };
         }
 
         const { data, error } = await admin
@@ -306,8 +306,8 @@ export async function approveJoinRequest(
         // 2. Fetch reviewer info for THAT organization
         const reviewer = await getReviewerInfo(user.id, req.organization_id, admin);
         if (!reviewer) return { success: false, message: "You are not a member of this organization." };
-        if (!["owner", "admin", "A001", "SA001"].includes(reviewer.roleCode ?? "")) {
-            return { success: false, message: "Only admins can approve requests." };
+        if (reviewer.roleCode !== "owner") {
+            return { success: false, message: "Only owners can approve requests." };
         }
 
         // Resolve role (default U001 = regular user)
@@ -418,8 +418,8 @@ export async function rejectJoinRequest(
         // 2. Fetch reviewer info for THAT organization
         const reviewer = await getReviewerInfo(user.id, req.organization_id, admin);
         if (!reviewer) return { success: false, message: "Not a member of this organization." };
-        if (!["owner", "admin", "A001", "SA001"].includes(reviewer.roleCode ?? "")) {
-            return { success: false, message: "Only admins can reject requests." };
+        if (reviewer.roleCode !== "owner") {
+            return { success: false, message: "Only owners can reject requests." };
         }
 
         const { error } = await admin
