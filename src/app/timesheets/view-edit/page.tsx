@@ -5,8 +5,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import type { SelectedFilter, DateRange } from "@/components/insights/types"
 import { Button } from "@/components/ui/button"
-import { Download, Search, Filter, Plus, X } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Download, X } from "lucide-react"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
 
 import { toast } from "sonner"
@@ -389,10 +388,10 @@ export default function ViewEditTimesheetsPage() {
                 <h1 className="text-xl font-semibold text-left">View &amp; Edit Timesheets</h1>
                 
                 <Tabs value={viewType} onValueChange={setViewType} className="w-auto mx-auto sm:mx-0">
-                    <TabsList className="rounded-full h-10 p-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                        <TabsTrigger value="members" className="rounded-full px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Members</TabsTrigger>
-                        <TabsTrigger value="week" className="rounded-full px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Week</TabsTrigger>
-                        <TabsTrigger value="day" className="rounded-full px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Day</TabsTrigger>
+                    <TabsList className="rounded-md h-10 p-1 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                        <TabsTrigger value="members" className="rounded-sm px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Members</TabsTrigger>
+                        <TabsTrigger value="week" className="rounded-sm px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Week</TabsTrigger>
+                        <TabsTrigger value="day" className="rounded-sm px-6 data-[state=active]:bg-white dark:data-[state=active]:bg-white/10 dark:data-[state=active]:text-white">Day</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>
