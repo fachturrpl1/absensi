@@ -179,8 +179,8 @@ export async function createInvitation(data: CreateInvitationData) {
         *,
         organization:organizations(*),
         role:system_roles(*),
-        departments:department_id(id, code, name),
-        positions:position_id(id, code, title)
+        department:department_id(id, code, name),
+        position:position_id(id, code, title)
       `
       )
       .single();
@@ -262,8 +262,8 @@ export async function getInvitationByToken(token: string) {
         *,
         organization:organizations(*),
         role:system_roles(*),
-        departments:department_id(id, code, name),
-        positions:position_id(id, code, title)
+        department:department_id(id, code, name),
+        position:position_id(id, code, title)
       `
       )
       .eq("invitation_token", token)
@@ -349,11 +349,32 @@ export async function acceptInvitation(data: AcceptInvitationData) {
 
     const invitation = invitationResult.data;
 
-    // Check if user already exists (e.g. via Supabase invite)
-    const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(
-      (user) => user.email?.toLowerCase() === invitation.email.toLowerCase(),
-    );
+    // Better way to check existing user: use a direct query to user_profiles or admin getUserByEmail
+    // If we use adminClient, it's more accurate for Auth users
+    const { error: _searchError } = await adminSupabase.auth.admin.listUsers({
+      // We don't have a direct getUserByEmail that returns password_hash etc,
+      // but we can filter in the admin client more efficiently if the SDK supports it.
+      // For now, we list but we need to check if user_profiles is enough? 
+      // Profiles only exist if they completed signup.
+    });
+    
+    // Better: use find by email from profiles first for a quick check,
+    // then verify in auth.admin if needed.
+    const { data: profile } = await adminSupabase
+      .from("user_profiles")
+      .select("id")
+      .eq("email", invitation.email.toLowerCase())
+      .maybeSingle();
+
+    let existingUser = null;
+    if (profile) {
+      const { data: authUser } = await adminSupabase.auth.admin.getUserById(profile.id);
+      existingUser = authUser.user;
+    } else {
+      // Fallback search in auth.users if profile doesn't exist yet but user might
+      const { data: { users } } = await adminSupabase.auth.admin.listUsers();
+      existingUser = users?.find(u => u.email?.toLowerCase() === invitation.email.toLowerCase());
+    }
 
     let userId: string;
 

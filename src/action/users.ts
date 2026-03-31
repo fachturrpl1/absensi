@@ -115,6 +115,24 @@ export async function signInWithGoogle() {
 }
 
 // ======================
+// RESEND CONFIRMATION EMAIL
+// ======================
+export async function resendConfirmationEmail(email: string) {
+  const supabase = await getSupabase()
+  
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://absensi-ubig.vercel.app'}/onboarding`,
+    }
+  })
+
+  if (error) return { success: false, message: error.message }
+  return { success: true, message: "Confirmation email sent successfully. Please check your inbox." }
+}
+
+// ======================
 // LOGIN
 // ======================
 export async function login(formData: FormData) {
@@ -140,7 +158,41 @@ export async function login(formData: FormData) {
     password,
   })
 
-  if (error) return { success: false, message: error.message }
+  if (error) {
+    if (error.message === "Invalid login credentials") {
+      try {
+        const { createAdminClient } = await import("@/utils/supabase/admin");
+        const admin = createAdminClient();
+        
+        // Cari user berdasarkan email menggunakan admin client
+        const { data: { users }, error: _adminError } = await admin.auth.admin.listUsers();
+        const user = users.find(u => u.email === email);
+
+        if (!user || user.email_confirmed_at) {
+          return { success: false, message: "Email atau kata sandi salah." };
+        }
+
+        if (!user.email_confirmed_at) {
+          return { 
+            success: false, 
+            message: "Email Anda belum dikonfirmasi. Periksa inbox/spam atau klik link di bawah.",
+            needsConfirmation: true 
+          };
+        }
+      } catch (err) {
+        logger.error("Admin check failed:", err);
+      }
+    }
+
+    const isUnconfirmed = error.message.toLowerCase().includes("email not confirmed") || 
+                         error.message.toLowerCase().includes("confirmed") ||
+                         (error as any).status === 400 && error.message.toLowerCase().includes("identity");
+    return { 
+      success: false, 
+      message: error.message,
+      needsConfirmation: isUnconfirmed
+    }
+  }
   if (!data.user) {
     return { success: false, message: "Login failed. Please ensure your email is confirmed." }
   }

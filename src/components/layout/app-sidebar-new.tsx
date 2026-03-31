@@ -122,7 +122,7 @@ const getSidebarGroups = (): NavGroup[] => [
         title: 'Timesheets',
         icon: Clock3,
         subItems: [
-          { title: 'View & edit', url: '/timesheets/view-edit', icon: Columns2 },
+          { title: 'View & Edit', url: '/view-edit/timesheet/absensi', icon: Columns2 },
           { title: 'Approvals', url: '/timesheets/approvals', icon: FileUser },
         ]
       },

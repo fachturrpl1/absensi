@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { login, signInWithGoogle } from "@/action/users";
+import { login, signInWithGoogle, resendConfirmationEmail } from "@/action/users";
 import { useAuthStore } from "@/store/user-store";
 import { GoogleIcon } from "@/components/ui/google-icon";
 
@@ -25,6 +25,8 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resending, setResending] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
@@ -53,6 +55,7 @@ export function LoginForm() {
 
     if (!result.success) {
       setError(result.message || "Login failed. Please try again.");
+      setNeedsConfirmation(!!result.needsConfirmation);
       setLoading(false);
     } else {
       // Set user in auth store
@@ -70,13 +73,28 @@ export function LoginForm() {
     setError(null);
 
     const result = await signInWithGoogle();
-
+    
     if (result.error) {
       setError(result.error);
       setGoogleLoading(false);
     } else if (result.url) {
       window.location.href = result.url;
     }
+  };
+
+  const handleResendEmail = async () => {
+    const email = form.getValues("email");
+    if (!email) return;
+
+    setResending(true);
+    const result = await resendConfirmationEmail(email);
+    if (result.success) {
+      setError(result.message || "Confirmation email sent.");
+      setNeedsConfirmation(false); // Hide the resend button after success
+    } else {
+      setError(result.message || "Failed to resend email.");
+    }
+    setResending(false);
   };
 
   return (
@@ -166,7 +184,29 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && (
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            <p>{error}</p>
+            {/* Tampilkan opsi resend jika terdeteksi butuh konfirmasi ATAU jika error adalah invalid credentials (karena Supabase sering menyamarkan pesan) */}
+            {(needsConfirmation || error.toLowerCase().includes("invalid")) && (
+              <div className="mt-2 flex flex-col gap-1 border-t border-destructive/20 pt-2">
+                <p className="text-[10px] sm:text-xs opacity-90 leading-normal">
+                  Jika email & password sudah benar namun gagal login, kemungkinan besar akun Anda <strong>belum dikonfirmasi</strong>. 
+                  Silakan periksa inbox atau folder spam email Anda.
+                </p>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-destructive underline justify-start text-xs"
+                  onClick={handleResendEmail}
+                  disabled={resending}
+                >
+                  {resending ? "Mengirim..." : "Kirim ulang email konfirmasi"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
         <Button className="w-full" type="submit" disabled={loading || googleLoading}>
           {loading ? "Logging in..." : "Login"}
         </Button>

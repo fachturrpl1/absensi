@@ -35,8 +35,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 import { getInvitationByToken, acceptInvitation } from "@/action/invitations";
 import { IMemberInvitation } from "@/interface";
@@ -144,35 +143,52 @@ export default function InvitationAcceptPage() {
   // Error state
   if (error || !invitation) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-xl bg-gray-800 border-gray-700">
+      <div className="min-h-screen bg-[#0F1115] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl bg-[#1A1D23] border-red-500/20 backdrop-blur-sm">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <CardTitle className="text-red-400">Invalid Invitation</CardTitle>
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="p-3 bg-red-500/10 rounded-full">
+                <AlertCircle className="h-8 w-8 text-red-500" />
+              </div>
+              <div>
+                <CardTitle className="text-xl font-bold text-white">Undangan Tidak Valid</CardTitle>
+                <CardDescription className="text-gray-400 mt-2">
+                  Maaf, sepertinya link undangan ini tidak dapat digunakan.
+                </CardDescription>
+              </div>
             </div>
           </CardHeader>
-          <CardContent className="text-gray-300">
-            <Alert variant="destructive" className="bg-red-500/10 border-red-500/20">
-              <AlertCircle className="h-4 w-4 text-red-400" />
-              <AlertTitle className="text-red-400">Error</AlertTitle>
-              <AlertDescription className="text-red-300">{error || "Invitation not found"}</AlertDescription>
+          <CardContent className="space-y-6">
+            <Alert variant="destructive" className="bg-red-500/5 border-red-500/10 text-red-400">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error || "Undangan tidak ditemukan"}
+              </AlertDescription>
             </Alert>
-            <div className="mt-6 space-y-2">
-              <p className="text-sm text-gray-300">
-                This invitation may have:
+            <div className="bg-black/20 rounded-lg p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                Penyebab Umum:
               </p>
-              <ul className="text-sm text-gray-400 list-disc list-inside space-y-1">
-                <li>Expired (invitations are valid for 7 days)</li>
-                <li>Already been accepted</li>
-                <li>Been cancelled by the organization</li>
+              <ul className="text-sm text-gray-400 space-y-2">
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-600" />
+                  Link sudah kadaluarsa (berlaku 7 hari)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-600" />
+                  Undangan sudah pernah diterima
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-gray-600" />
+                  Undangan telah dibatalkan oleh admin
+                </li>
               </ul>
             </div>
             <Button
-              className="w-full mt-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white border-0"
+              className="w-full bg-white text-black hover:bg-gray-200 transition-colors font-semibold py-6"
               onClick={() => router.push("/")}
             >
-              Go to Home
+              Kembali ke Beranda
             </Button>
           </CardContent>
         </Card>
@@ -180,87 +196,77 @@ export default function InvitationAcceptPage() {
     );
   }
 
-  // Success state - Show accept form
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4 py-12">
-      <div className="w-full max-w-2xl space-y-6">
+    <div className="min-h-screen bg-[#0F1115] flex items-center justify-center p-4 py-12 selection:bg-blue-500/30">
+      <div className="w-full max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
         {/* Invitation Details Card */}
-        <Card className="shadow-xl bg-gray-800 border-gray-700">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-green-400" />
-              <CardTitle className="text-2xl text-white">You're Invited!</CardTitle>
+        <Card className="shadow-2xl bg-[#1A1D23] border-gray-800/50 backdrop-blur-sm overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600" />
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold text-white tracking-tight">Bergabung ke Organisasi</CardTitle>
+                <CardDescription className="text-gray-400 text-sm">
+                  Lengkapi profil Anda untuk mulai berkolaborasi
+                </CardDescription>
+              </div>
             </div>
-            <CardDescription className="text-base text-gray-300">
-              Complete your profile to join the organization
-            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Organization Info */}
-              <div className="flex items-center gap-3 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
-                <Building2 className="h-5 w-5 text-blue-400" />
-                <div>
-                  <p className="text-sm font-medium text-gray-300">Organization</p>
-                  <p className="text-lg font-semibold text-white">
-                    {(invitation.organization as any)?.name || "Unknown Organization"}
-                  </p>
-                </div>
+          <CardContent className="space-y-6">
+            {/* Organization Info */}
+            <div className="group relative overflow-hidden flex items-center gap-4 p-5 bg-blue-500/5 hover:bg-blue-500/10 transition-colors rounded-xl border border-blue-500/10">
+              <div className="p-3 bg-blue-500/10 rounded-xl group-hover:scale-110 transition-transform">
+                <Building2 className="h-6 w-6 text-blue-400" />
               </div>
-
-              {/* Pre-assigned Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {invitation.role && (
-                  <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                    <Shield className="h-4 w-4 text-purple-400" />
-                    <div>
-                      <p className="text-xs text-gray-400">Role</p>
-                      <p className="text-sm font-medium text-gray-200">{(invitation.role as any)?.name}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {invitation.department && (
-                  <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                    <Users className="h-4 w-4 text-blue-400" />
-                    <div>
-                      <p className="text-xs text-gray-400">Group</p>
-                      <p className="text-sm font-medium text-gray-200">{invitation.department.name}</p>
-                    </div>
-                  </div>
-                )}
-                
-                {invitation.position && (
-                  <div className="flex items-center gap-2 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
-                    <Briefcase className="h-4 w-4 text-green-400" />
-                    <div>
-                      <p className="text-xs text-gray-400">Position</p>
-                      <p className="text-sm font-medium text-gray-200">{invitation.position.title}</p>
-                    </div>
-                  </div>
-                )}
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-blue-400/60 transition-colors">Organisasi</p>
+                <p className="text-xl font-bold text-white mt-0.5">
+                  {(invitation as any).organization?.name || "Unknown Organization"}
+                </p>
               </div>
-
-              {/* Personal Message */}
-              {invitation.message && (
-                <>
-                  <Separator className="bg-gray-600" />
-                  <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <p className="text-sm font-medium text-blue-300 mb-2">Personal Message</p>
-                    <p className="text-sm text-gray-300">{invitation.message}</p>
-                  </div>
-                </>
-              )}
             </div>
+
+            {/* Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5 p-4 bg-gray-800/40 rounded-xl border border-gray-700/30 hover:border-purple-500/30 transition-all group">
+                <Shield className="h-4 w-4 text-purple-400/70 group-hover:text-purple-400 transition-colors" />
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Peran</p>
+                <p className="text-sm font-semibold text-gray-200">{(invitation as any).role?.name || "Member"}</p>
+              </div>
+              
+              <div className="flex flex-col gap-1.5 p-4 bg-gray-800/40 rounded-xl border border-gray-700/30 hover:border-blue-500/30 transition-all group">
+                <Users className="h-4 w-4 text-blue-400/70 group-hover:text-blue-400 transition-colors" />
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Grup</p>
+                <p className="text-sm font-semibold text-gray-200">{(invitation as any).department?.name || "-"}</p>
+              </div>
+              
+              <div className="flex flex-col gap-1.5 p-4 bg-gray-800/40 rounded-xl border border-gray-700/30 hover:border-green-500/30 transition-all group">
+                <Briefcase className="h-4 w-4 text-green-400/70 group-hover:text-green-400 transition-colors" />
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Posisi</p>
+                <p className="text-sm font-semibold text-gray-200">{(invitation as any).position?.title || "-"}</p>
+              </div>
+            </div>
+
+            {invitation.message && (
+              <div className="relative p-5 bg-gray-800/20 border border-gray-800 rounded-xl italic">
+                <span className="absolute top-0 left-4 -translate-y-1/2 bg-[#1A1D23] px-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                  Pesan Personal
+                </span>
+                <p className="text-sm text-gray-300 leading-relaxed">"{invitation.message}"</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Accept Form Card */}
-        <Card className="shadow-xl bg-gray-800 border-gray-700">
+        <Card className="shadow-2xl bg-[#1A1D23] border-gray-800/50 backdrop-blur-sm overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-xl text-white">Complete Your Profile</CardTitle>
-            <CardDescription className="text-base text-gray-300">
-              Create your account to accept the invitation
+            <CardTitle className="text-xl font-bold text-white">Lengkapi Data Diri</CardTitle>
+            <CardDescription className="text-gray-400">
+              Data ini akan digunakan sebagai identitas akun Anda
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -397,17 +403,17 @@ export default function InvitationAcceptPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-0"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 shadow-xl shadow-blue-900/20 transition-all rounded-xl"
                   size="lg"
                   disabled={submitting}
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating Account...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Memproses...
                     </>
                   ) : (
-                    "Accept Invitation & Create Account"
+                    "Terima Undangan & Buat Akun"
                   )}
                 </Button>
               </form>

@@ -664,9 +664,9 @@ export interface IMemberInvitation {
     accepted_at?: string;
     created_at: string;
     updated_at?: string;
-    organization?: IOrganization;
+    organization: IOrganization;
     inviter?: IUser;
-    role?: IRole;
+    role: IRole;
     department?: IDepartments;
     position?: IPositions;
 }
