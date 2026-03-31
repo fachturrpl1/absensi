@@ -308,7 +308,6 @@ export default function OnboardingSetupPage() {
                 queryClient.invalidateQueries({ queryKey: ["organization"] });
 
                 orgStore.setOrganizationId(result.data.organizationId, result.data.organizationName);
-                orgStore.setTimezone(formData.timezone);
                 userStore.setRole(defaultRoleCode, result.data.organizationId);
 
                 toast.dismiss(toastId);

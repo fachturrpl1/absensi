@@ -21,7 +21,7 @@ export interface FormMethods {
   control: Control<SingleFormValues>
   handleSubmit: UseFormHandleSubmit<SingleFormValues>
   formState: {
-    isSubmitting: boolean
+    isSubmitting: boolean 
   }
   setValue: (name: keyof SingleFormValues, value: SingleFormValues[keyof SingleFormValues]) => void
   clearErrors: (name: keyof SingleFormValues) => void

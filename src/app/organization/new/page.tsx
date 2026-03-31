@@ -337,7 +337,6 @@ export default function NewOrganizationPageFix() {
         queryClient.invalidateQueries({ queryKey: ["organization", "full-data"] });
 
         orgStore.setOrganizationId(result.data.organizationId, result.data.organizationName);
-        orgStore.setTimezone(formData.timezone);
         userStore.setRole(formData.defaultRoleId || "owner", result.data.organizationId);
 
         toast.dismiss(toastId);

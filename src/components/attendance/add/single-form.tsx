@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezonePlugin from "dayjs/plugin/timezone";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +31,10 @@ import {
 } from "@/action/attendance";
 import type { MemberOption } from "@/types/attendance";
 import type { DialogHandlers } from "@/components/attendance/add/dialogs/member-dialog";
+
+// Inisialisasi plugin dayjs
+dayjs.extend(utc);
+dayjs.extend(timezonePlugin);
 
 // ----------------------------------------------------------
 // Types
@@ -56,14 +62,16 @@ interface TimestampRecord {
 }
 
 // ----------------------------------------------------------
-// Helpers
+// Helpers (Sekarang terikat pada parameter Timezone)
 // ----------------------------------------------------------
 function nowISO(): string {
+  // .toISOString() selalu menghasilkan format absolute UTC yang benar untuk disimpan di database
   return new Date().toISOString();
 }
 
-function todayISO(): string {
-  return format(new Date(), "yyyy-MM-dd");
+function todayISO(tz: string): string {
+  // Dapatkan tanggal "hari ini" berdasarkan zona waktu organisasi, bukan perangkat lokal
+  return dayjs().tz(tz).format("YYYY-MM-DD");
 }
 
 function parseTimeToMinutes(time: string | null | undefined): number | null {
@@ -75,15 +83,17 @@ function parseTimeToMinutes(time: string | null | undefined): number | null {
   return hh * 60 + mm;
 }
 
-function currentMinutes(): number {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
+function currentMinutes(tz: string): number {
+  // Dapatkan menit saat ini berdasarkan jam di zona waktu organisasi
+  const now = dayjs().tz(tz);
+  return now.hour() * 60 + now.minute();
 }
 
-function formatTime(iso: string | null): string {
+function formatTime(iso: string | null, tz: string): string {
   if (!iso) return "--:--";
   try {
-    return format(new Date(iso), "HH:mm");
+    // Normalisasi waktu UTC ke zona waktu organisasi lalu format menjadi HH:mm
+    return dayjs.utc(iso).tz(tz).format("HH:mm");
   } catch {
     return "--:--";
   }
@@ -111,22 +121,30 @@ function stepIndex(step: AttendanceStep): number {
   return STEP_ORDER.indexOf(step);
 }
 
-// ----------------------------------------------------------
-// Live clock
-// ----------------------------------------------------------
-function LiveClock() {
-  const [time, setTime] = useState(() => format(new Date(), "HH:mm:ss"));
+// Live clock (Terikat pada Timezone)
+function LiveClock({ timezone }: { timezone: string }) {
+  const [time, setTime] = useState(() => dayjs().tz(timezone).format("HH:mm:ss"));
+  
   useEffect(() => {
+    setTime(dayjs().tz(timezone).format("HH:mm:ss"));
+
     const id = setInterval(
-      () => setTime(format(new Date(), "HH:mm:ss")),
+      () => setTime(dayjs().tz(timezone).format("HH:mm:ss")),
       1000,
     );
     return () => clearInterval(id);
-  }, []);
+  }, [timezone]);
+  
   return (
-    <span className="font-mono tabular-nums text-xl font-semibold tracking-tight">
-      {time}
-    </span>
+    <div className="flex flex-col items-end">
+      <span className="font-mono tabular-nums text-xl font-semibold tracking-tight">
+        {time}
+      </span>
+      {/* Label indikator untuk membongkar zona waktu apa yang masuk ke komponen */}
+      <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-md mt-0.5">
+        TZ: {timezone}
+      </span>
+    </div>
   );
 }
 
@@ -210,15 +228,14 @@ function ActionButton({
 // ----------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------
-interface SingleFormProps {
+export interface SingleFormProps {
   activeTab: "single" | "batch";
   members: MemberOption[];
   loading: boolean;
   dialogHandlers: DialogHandlers;
-  // ✅ Prop baru — dipanggil dari parent saat MemberDialog confirm pilihan
   selectedMemberId?: string;
   onMemberSelect?: (memberId: string) => void;
-  // Legacy props — dibiarkan agar tidak break parent
+  timezone: string;
   form?: any;
   singleCheckInDate?: string | null;
   onSubmit?: (values: any) => Promise<void>;
@@ -230,6 +247,7 @@ export function SingleForm({
   loading: membersLoading,
   dialogHandlers,
   selectedMemberId: externalMemberId = "",
+  timezone,
   onMemberSelect: _onMemberSelect,
 }: SingleFormProps) {
   const router = useRouter();
@@ -269,7 +287,7 @@ export function SingleForm({
 
     const fetchSchedule = async () => {
       setScheduleLoading(true);
-      const today = todayISO();
+      const today = todayISO(timezone); // Gunakan timezone!
       const res = await getMemberSchedule(externalMemberId, today);
       setScheduleLoading(false);
 
@@ -292,19 +310,19 @@ export function SingleForm({
     };
 
     fetchSchedule();
-  }, [externalMemberId]);
+  }, [externalMemberId, timezone]);
 
   // ----------------------------------------------------------
   // Break window check — waktu sekarang dalam range break_start–break_end
   // ----------------------------------------------------------
   const isInBreakWindow = useCallback((): boolean => {
     if (!schedule?.break_start || !schedule?.break_end) return false;
-    const current = currentMinutes();
+    const current = currentMinutes(timezone); // Gunakan timezone!
     const bStart = parseTimeToMinutes(schedule.break_start);
     const bEnd = parseTimeToMinutes(schedule.break_end);
     if (bStart === null || bEnd === null) return false;
     return current >= bStart && current <= bEnd;
-  }, [schedule]);
+  }, [schedule, timezone]);
 
   // ----------------------------------------------------------
   // Selected member info
@@ -339,16 +357,16 @@ export function SingleForm({
     if (!externalMemberId || !schedule) return;
     setActionLoading("checkin");
     try {
-      const today = todayISO();
+      const today = todayISO(timezone); // Gunakan timezone
       const existing = await checkExistingAttendance(externalMemberId, today);
       if (existing.exists) {
         toast.error("Attendance already exists for today");
         return;
       }
-      const now = nowISO();
+      const now = nowISO(); // UTC absolut
       setTimestamps((prev) => ({ ...prev, checkIn: now }));
       setStep("checked_in");
-      toast.success(`Check In recorded at ${formatTime(now)}`);
+      toast.success(`Check In recorded at ${formatTime(now, timezone)}`);
     } catch {
       toast.error("Failed to record Check In");
     } finally {
@@ -362,7 +380,7 @@ export function SingleForm({
       const now = nowISO();
       setTimestamps((prev) => ({ ...prev, breakIn: now }));
       setStep("break_in");
-      toast.success(`Break started at ${formatTime(now)}`);
+      toast.success(`Break started at ${formatTime(now, timezone)}`);
     } finally {
       setActionLoading(null);
     }
@@ -374,7 +392,7 @@ export function SingleForm({
       const now = nowISO();
       setTimestamps((prev) => ({ ...prev, breakOut: now }));
       setStep("break_out");
-      toast.success(`Break ended at ${formatTime(now)}`);
+      toast.success(`Break ended at ${formatTime(now, timezone)}`);
     } finally {
       setActionLoading(null);
     }
@@ -385,7 +403,7 @@ export function SingleForm({
     setActionLoading("checkout");
     try {
       const now = nowISO();
-      const today = todayISO();
+      const today = todayISO(timezone); // Gunakan timezone
 
       const result = await createManualAttendance({
         organization_member_id: externalMemberId,
@@ -422,7 +440,6 @@ export function SingleForm({
   // ----------------------------------------------------------
   return (
     <TabsContent value="single" className="space-y-5">
-
       {/* ── Member selector ── */}
       <Card className="border shadow-sm">
         <CardContent className="pt-5 pb-5">
@@ -504,7 +521,7 @@ export function SingleForm({
                 )}
                 <div className="flex items-center gap-1.5 text-muted-foreground ml-auto">
                   <Timer className="h-3.5 w-3.5" />
-                  <LiveClock />
+                  <LiveClock timezone={timezone} />
                 </div>
               </div>
             ) : scheduleError ? (
@@ -564,7 +581,7 @@ export function SingleForm({
           label="Check In"
           sublabel={
             timestamps.checkIn
-              ? formatTime(timestamps.checkIn)
+              ? formatTime(timestamps.checkIn, timezone)
               : "Tap to start"
           }
           icon={<LogIn className="h-6 w-6" />}
@@ -579,7 +596,7 @@ export function SingleForm({
           sublabel={
             schedule?.break_start
               ? timestamps.breakIn
-                ? formatTime(timestamps.breakIn)
+                ? formatTime(timestamps.breakIn, timezone)
                 : `From ${schedule.break_start.slice(0, 5)}`
               : "No break scheduled"
           }
@@ -593,7 +610,7 @@ export function SingleForm({
         <ActionButton
           label="Break Out"
           sublabel={
-            timestamps.breakOut ? formatTime(timestamps.breakOut) : "End break"
+            timestamps.breakOut ? formatTime(timestamps.breakOut, timezone) : "End break"
           }
           icon={<Coffee className="h-6 w-6" />}
           onClick={handleBreakOut}
@@ -606,7 +623,7 @@ export function SingleForm({
           label="Check Out"
           sublabel={
             timestamps.checkOut
-              ? formatTime(timestamps.checkOut)
+              ? formatTime(timestamps.checkOut, timezone)
               : "Tap to finish"
           }
           icon={<LogOut className="h-6 w-6" />}
@@ -655,7 +672,7 @@ export function SingleForm({
                         : "text-muted-foreground/40",
                     )}
                   >
-                    {item.value ? formatTime(item.value) : "--:--"}
+                    {item.value ? formatTime(item.value, timezone) : "--:--"}
                   </p>
                 </div>
               ))}

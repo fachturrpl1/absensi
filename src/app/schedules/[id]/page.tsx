@@ -22,6 +22,7 @@ import {
 } from "@/action/schedule"
 import { getAllOrganization_member } from "@/action/members"
 import { createMemberSchedulesBulk } from "@/action/member-schedule"
+import { useFormatDate } from "@/hooks/use-format-date"
 
 // Day keys for iteration
 type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6
@@ -131,7 +132,10 @@ export default function WorkScheduleDetailsPage() {
   const scheduleId = Number(params.id)
   const { format: timeFormat } = useTimeFormat()
   const orgStore = useOrgStore()
-  const organizationTimezone = orgStore.timezone || "Asia/Jakarta"
+
+  // Inisialisasi hook timezone di sini
+  const { timezone } = useFormatDate()
+  const organizationTimezone = timezone || "UTC"
 
   // State
   const [loading, setLoading] = useState(true)

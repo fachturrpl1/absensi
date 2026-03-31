@@ -98,9 +98,6 @@ export default function OrganizationPage() {
       console.log("[ORG-PAGE] Setting org ID:", org.id, org.name)
       orgStore.setOrganizationId(org.id, org.name)
 
-      console.log("[ORG-PAGE] Setting timezone:", org.timezone)
-      orgStore.setTimezone(org.timezone)
-
       // Set user role
       console.log("[ORG-PAGE] Setting role")
       authStore.setRole("owner", 1)

@@ -1,49 +1,36 @@
 "use client"
 
-// src/app/attendance/add/page.tsx (atau sesuai path Anda)
-
-import { useCallback, useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SingleForm } from "@/components/attendance/add/single-form"
 import { BatchForm } from "@/components/attendance/add/batch-form"
 import { MemberDialog } from "@/components/attendance/add/dialogs/member-dialog"
-import {
-  singleFormSchema,
-  type SingleFormValues,
-} from "@/types/attendance"
+import { singleFormSchema, type SingleFormValues } from "@/types/attendance"
 import { useRouter } from "next/navigation"
 import { useMembers } from "@/hooks/attendance/add/use-members"
 import { useBatchAttendance } from "@/hooks/attendance/add/use-batch-attendance"
 import { createManualAttendance } from "@/action/attendance"
 import { toast } from "sonner"
+import { useFormatDate } from "@/hooks/use-format-date"
 
-// Helper untuk parse date+time → Date object
-const parseDateTime = (dateStr: string, timeStr: string): Date => {
-  const [year, month, day] = dateStr.split("-")
-  const [hour, minute] = timeStr.split(":")
-  return new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    0,
-    0
-  )
+const parseDateTime = (dateStr: string, timeStr: string): string => {
+  return `${dateStr}T${timeStr}:00.000Z`
 }
 
 export default function AttendancePage() {
   const router = useRouter()
+  
+  // Hook ini sekarang akan otomatis menarik timezone dari organisasi yang aktif!
+  const { timezone } = useFormatDate()
 
-  // ✅ Form tetap dipakai — MemberDialog masih set via form.setValue
   const singleForm = useForm<SingleFormValues>({
     resolver: zodResolver(singleFormSchema),
     defaultValues: {
       memberId: "",
-      checkInDate: new Date().toISOString().split("T")[0],
-      checkInTime: new Date().toTimeString().slice(0, 5),
+      checkInDate: "",
+      checkInTime: "",
       checkOutDate: "",
       checkOutTime: "",
       status: "present",
@@ -51,13 +38,8 @@ export default function AttendancePage() {
     }
   })
 
-  // ✅ State lokal untuk diteruskan ke SingleForm
-  // Ini adalah "jembatan" antara MemberDialog (yang set form)
-  // dan SingleForm baru (yang tidak pakai form)
   const [selectedMemberId, setSelectedMemberId] = useState<string>("")
 
-  // ✅ Sync: setiap kali form.memberId berubah (diset oleh MemberDialog),
-  // update selectedMemberId agar SingleForm ikut ter-update
   const watchedMemberId = singleForm.watch("memberId")
   useEffect(() => {
     if (watchedMemberId && watchedMemberId !== selectedMemberId) {
@@ -68,26 +50,24 @@ export default function AttendancePage() {
   const { members, departments, loading: membersLoading } = useMembers()
   const batch = useBatchAttendance()
 
-  // Legacy submit — tidak dipakai di SingleForm baru tapi dibiarkan
-  // agar tidak break jika ada komponen lain yang masih pakai
   const handleSingleSubmit = useCallback(async (values: SingleFormValues) => {
     try {
       const res = await createManualAttendance({
         organization_member_id: values.memberId,
         attendance_date: values.checkInDate,
-        actual_check_in: parseDateTime(values.checkInDate, values.checkInTime).toISOString(),
+        actual_check_in: parseDateTime(values.checkInDate, values.checkInTime),
         actual_check_out: values.checkOutDate && values.checkOutTime
-          ? parseDateTime(values.checkOutDate, values.checkOutTime).toISOString()
+          ? parseDateTime(values.checkOutDate, values.checkOutTime)
           : null,
         status: values.status,
         remarks: values.remarks,
         check_in_method: "MANUAL",
         check_out_method: values.checkOutDate ? "MANUAL" : undefined,
         actual_break_start: values.breakStartTime && values.checkInDate
-          ? parseDateTime(values.checkInDate, values.breakStartTime).toISOString()
+          ? parseDateTime(values.checkInDate, values.breakStartTime)
           : null,
         actual_break_end: values.breakEndTime && values.checkInDate
-          ? parseDateTime(values.checkInDate, values.breakEndTime).toISOString()
+          ? parseDateTime(values.checkInDate, values.breakEndTime)
           : null,
       })
 
@@ -99,7 +79,6 @@ export default function AttendancePage() {
         toast.error(res.message || "Failed to save record")
       }
     } catch (error) {
-      console.error("Submit error:", error)
       toast.error("An unexpected error occurred")
     }
   }, [singleForm, router])
@@ -112,7 +91,7 @@ export default function AttendancePage() {
         <h1 className="text-xl font-semibold">Add Attendance</h1>
       </div>
 
-      <Tabs defaultValue="single" className="w-full">
+      <Tabs defaultValue="single" className="w-full mt-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="single">Single Entry</TabsTrigger>
           <TabsTrigger value="batch">Batch Entry</TabsTrigger>
@@ -126,10 +105,9 @@ export default function AttendancePage() {
           singleCheckInDate={singleForm.watch("checkInDate")}
           onSubmit={handleSingleSubmit}
           dialogHandlers={batch}
-          // ✅ Prop baru: member yang dipilih dari MemberDialog
-          // diteruskan ke SingleForm via state yang di-sync dari form
           selectedMemberId={selectedMemberId}
           onMemberSelect={setSelectedMemberId}
+          timezone={timezone} 
         />
 
         <BatchForm
@@ -139,7 +117,6 @@ export default function AttendancePage() {
         />
       </Tabs>
 
-      {/* MemberDialog tidak perlu diubah — tetap set via form.setValue */}
       <MemberDialog
         members={members}
         departments={departments}
@@ -149,4 +126,4 @@ export default function AttendancePage() {
       />
     </div>
   )
-} 
+}
