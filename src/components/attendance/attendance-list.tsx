@@ -106,6 +106,7 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
         <p className="font-medium text-xs">{record.member?.department || '-'}</p>
       </td>
 
+      {/* 1. Check In */}
       <td className="p-3">
         <div className="flex flex-col text-xs font-mono">
           <span className="font-medium whitespace-nowrap">{checkInDisplay.date}</span>
@@ -118,18 +119,7 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
         </div>
       </td>
 
-      <td className="p-3">
-        <div className="flex flex-col text-xs font-mono">
-          <span className="font-medium whitespace-nowrap">{checkOutDisplay.date}</span>
-          <span className="text-muted-foreground">{checkOutDisplay.time}</span>
-          {checkOutDisplay.method && (
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-              {checkOutDisplay.method}
-            </span>
-          )}
-        </div>
-      </td>
-
+      {/* 2. Break In */}
       <td className="p-3">
         <div className="flex flex-col text-xs font-mono">
           <span className="font-medium whitespace-nowrap">{breakInDisplay.date}</span>
@@ -142,6 +132,7 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
         </div>
       </td>
 
+      {/* 3. Break Out */}
       <td className="p-3">
         <div className="flex flex-col text-xs font-mono">
           <span className="font-medium whitespace-nowrap">{breakOutDisplay.date}</span>
@@ -154,7 +145,20 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
         </div>
       </td>
 
+      {/* 4. Check Out */}
       <td className="p-3">
+        <div className="flex flex-col text-xs font-mono">
+          <span className="font-medium whitespace-nowrap">{checkOutDisplay.date}</span>
+          <span className="text-muted-foreground">{checkOutDisplay.time}</span>
+          {checkOutDisplay.method && (
+            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+              {checkOutDisplay.method}
+            </span>
+          )}
+        </div>
+      </td>
+
+      <td className="p-3 text-center">
         <span className="font-medium text-xs">{record.workHours || '0h'}</span>
       </td>
 
@@ -170,7 +174,7 @@ const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
       </td>
 
       <td className="p-3">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-1">
           <Button variant="ghost" size="icon" title="Edit" onClick={onEdit}>
             <Edit className="h-4 w-4" />
           </Button>
@@ -374,7 +378,6 @@ function AttendanceListPage() {
         };
       };
 
-      // PERBAIKAN LOGIKA: Hanya tampilkan method jika jam (timestamp) ada
       const checkInDisplay = { 
         ...format(record.checkIn), 
         method: record.checkIn ? (record.checkInMethod || '') : '' 
@@ -610,7 +613,7 @@ function AttendanceListPage() {
       <div className="mt-4">
         <div className="overflow-x-auto w-full border rounded-lg">
           <table className="w-full min-w-[880px]">
-            <thead className="bg-muted/50">
+            <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="p-3 text-left w-10">
                   <input
@@ -620,21 +623,23 @@ function AttendanceListPage() {
                     className="rounded"
                   />
                 </th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Member</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Group</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Check In</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Check Out</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Break In</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Break Out</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">Work Hours</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider w-20">Actions</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider">Member</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider">Group</th>
+                {/* URUTAN DIPERBAIKI */}
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">Check In</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Break In</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Break Out</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Check Out</th>
+                
+                <th className="p-3 text-center text-xs font-semibold uppercase tracking-wider">Work Hours</th>
+                <th className="p-3 text-left text-xs font-semibold uppercase tracking-wider">Status</th>
+                <th className="p-3 text-center text-xs font-semibold uppercase tracking-wider w-24">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={`skel-${i}`} className="border-b">
+                  <tr key={`skel-${i}`}>
                     <td className="p-3"><Skeleton className="h-4 w-4 rounded" /></td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
@@ -645,15 +650,15 @@ function AttendanceListPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-3"><Skeleton className="h-3 w-16" /></td>
+                    <td className="p-3"><Skeleton className="h-3 w-20" /></td>
                     <td className="p-3"><Skeleton className="h-8 w-16" /></td>
                     <td className="p-3"><Skeleton className="h-8 w-16" /></td>
                     <td className="p-3"><Skeleton className="h-8 w-16" /></td>
                     <td className="p-3"><Skeleton className="h-8 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-3 w-10" /></td>
+                    <td className="p-3 text-center"><Skeleton className="h-3 w-8 mx-auto" /></td>
                     <td className="p-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
+                    <td className="p-3 text-center">
+                      <div className="flex justify-center gap-1">
                         <Skeleton className="h-8 w-8 rounded" />
                         <Skeleton className="h-8 w-8 rounded" />
                       </div>
