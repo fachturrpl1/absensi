@@ -102,6 +102,20 @@ export const groupMembersSkeletonColumns: ColumnSkeletonDef[] = [
   { cell: "status",  headerWidth: "w-16" },
 ]
 
+/** Kolom untuk attendance list table */
+export const attendanceListColumns: ColumnSkeletonDef[] = [
+  { cell: "checkbox", headClassName: "w-10 px-3", cellClassName: "px-3 py-3" },
+  { cell: "name", headerWidth: "w-20", cellClassName: "px-3 py-3", cellWidth: "w-32" },
+  { cell: "text", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "text", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "text", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "text", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "text", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "number", headerWidth: "w-20", cellClassName: "px-3 py-3", cellWidth: "w-12 text-center" },
+  { cell: "badge", headerWidth: "w-16", cellClassName: "px-3 py-3", cellWidth: "w-20" },
+  { cell: "actions", headClassName: "w-24 text-center px-3", cellClassName: "px-3 py-3 text-center" },
+]
+
 // ── Cell renderers ─────────────────────────────────────────────────────────────
 
 function CellSkeleton({ type, cellWidth }: { type: ColumnSkeletonDef["cell"]; cellWidth?: string }) {

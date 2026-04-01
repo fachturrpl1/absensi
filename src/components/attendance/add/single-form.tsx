@@ -1,36 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezonePlugin from "dayjs/plugin/timezone";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
-  LogIn,
-  LogOut,
-  Coffee,
-  Clock,
-  Search,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  CalendarOff,
-  Timer,
+  LogIn, LogOut, Coffee, Clock, Search,
+  AlertCircle, CheckCircle2, Loader2, CalendarOff,
+  RotateCcw, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  getMemberSchedule,
-  checkExistingAttendance,
-} from "@/action/attendance";
+import { getMemberSchedule, checkExistingAttendance } from "@/action/attendance";
 import type { MemberOption } from "@/types/attendance";
 import type { DialogHandlers } from "@/components/attendance/add/dialogs/member-dialog";
 
-// Inisialisasi plugin dayjs
 dayjs.extend(utc);
 dayjs.extend(timezonePlugin);
 
@@ -42,8 +29,8 @@ type AttendanceStep = "idle" | "checked_in" | "break_in" | "break_out" | "checke
 interface ScheduleRule {
   start_time: string;
   end_time: string;
-  break_start: string | null | undefined;
-  break_end: string | null | undefined;
+  break_start?: string | null;
+  break_end?: string | null;
   day_of_week: number;
 }
 
@@ -74,21 +61,26 @@ const formatTime = (iso: string | null, tz: string) => {
   if (!iso) return "--:--";
   return dayjs.utc(iso).tz(tz).format("HH:mm");
 };
-const parseTimeToMinutes = (time: string | null | undefined) => {
+const parseTimeToMinutes = (time: string | null | undefined): number | null => {
   if (!time) return null;
   const parts = time.split(":").map(Number);
   const hh = parts[0] ?? 0;
   const mm = parts[1] ?? 0;
   return hh * 60 + mm;
 };
-
-const currentMinutes = (tz: string): number => {
+const currentMinutes = (tz: string) => {
   const now = dayjs().tz(tz);
   return now.hour() * 60 + now.minute();
 };
 
+const STEP_ORDER: AttendanceStep[] = ["idle", "checked_in", "break_in", "break_out", "checked_out"];
+function stepIndex(step: AttendanceStep) { return STEP_ORDER.indexOf(step); }
+function isDone(current: AttendanceStep, target: AttendanceStep) {
+  return stepIndex(current) > stepIndex(target);
+}
+
 // ----------------------------------------------------------
-// UI Components
+// Live Clock — compact, inline
 // ----------------------------------------------------------
 function LiveClock({ timezone }: { timezone: string }) {
   const [time, setTime] = useState(() => dayjs().tz(timezone).format("HH:mm:ss"));
@@ -96,48 +88,113 @@ function LiveClock({ timezone }: { timezone: string }) {
     const id = setInterval(() => setTime(dayjs().tz(timezone).format("HH:mm:ss")), 1000);
     return () => clearInterval(id);
   }, [timezone]);
-  return (
-    <div className="flex flex-col items-end">
-      <span className="font-mono tabular-nums text-xl font-semibold tracking-tight">{time}</span>
-      <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-1.5 py-0.5 rounded-md mt-0.5">
-        TZ: {timezone}
-      </span>
-    </div>
-  );
+  return <span className="font-mono tabular-nums text-sm font-semibold">{time}</span>;
 }
 
-const STEP_ORDER: AttendanceStep[] = ["idle", "checked_in", "break_in", "break_out", "checked_out"];
-const STEP_LABELS: Record<Exclude<AttendanceStep, "idle">, string> = {
-  checked_in: "Check In",
-  break_in: "Break In",
-  break_out: "Break Out",
-  checked_out: "Check Out",
-};
-function stepIndex(step: AttendanceStep): number { return STEP_ORDER.indexOf(step); }
-
 // ----------------------------------------------------------
-// Action Button Styled
+// Compact Action Button — large tap target, minimal text
 // ----------------------------------------------------------
-const VARIANT_ACTIVE = "border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-950/40 dark:text-gray-400 dark:hover:bg-gray-950/60";
-const VARIANT_DONE = "border-gray-300 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-500";
+interface ActionBtnProps {
+  label: string;
+  time: string | null;
+  icon: React.ReactNode;
+  onClick: () => void;
+  disabled: boolean;
+  loading: boolean;
+  done: boolean;
+  active: boolean; // is this the current step to take?
+  tz: string;
+}
 
-function ActionButton({ label, sublabel, icon, onClick, disabled, loading, done }: any) {
+function ActionBtn({ label, time, icon, onClick, disabled, loading, done, active, tz }: ActionBtnProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || loading || done}
       className={cn(
-        "relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 p-5 transition-all duration-200 w-full",
-        "disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none",
-        done ? VARIANT_DONE : VARIANT_ACTIVE,
-        !disabled && !done && "shadow-sm hover:shadow-md active:scale-[0.98]",
+        "relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 transition-all duration-150",
+        "w-full h-[88px] sm:h-24",
+        "disabled:opacity-35 disabled:cursor-not-allowed disabled:pointer-events-none",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        done
+          ? "border-border bg-muted/40 text-muted-foreground"
+          : active
+          ? "border-foreground bg-foreground text-background shadow-lg scale-[1.02]"
+          : "border-border bg-background text-foreground hover:border-foreground/40 hover:bg-muted/30",
+        !disabled && !done && !active && "active:scale-[0.97]",
       )}
     >
-      {done && <span className="absolute top-2 right-2"><CheckCircle2 className="h-4 w-4" /></span>}
-      <span className="text-2xl">{loading ? <Loader2 className="h-6 w-6 animate-spin" /> : icon}</span>
-      <span className="text-sm font-semibold leading-none">{label}</span>
-      {sublabel && <span className="text-[11px] font-normal opacity-70 text-center leading-tight">{sublabel}</span>}
+      {done && (
+        <CheckCircle2 className="absolute top-2 right-2 h-3.5 w-3.5 text-muted-foreground/60" />
+      )}
+      <span className={cn("transition-all", loading ? "opacity-0" : "opacity-100")}>
+        {icon}
+      </span>
+      {loading && (
+        <Loader2 className="absolute h-5 w-5 animate-spin" />
+      )}
+      <span className="text-[11px] font-semibold tracking-wide uppercase leading-none">
+        {label}
+      </span>
+      {time && (
+        <span className="text-[10px] font-mono opacity-60 leading-none">
+          {formatTime(time, tz)}
+        </span>
+      )}
+      {!time && !done && active && (
+        <span className="text-[10px] opacity-50 leading-none">now</span>
+      )}
+    </button>
+  );
+}
+
+// ----------------------------------------------------------
+// Member row — compact list item for quick selection
+// ----------------------------------------------------------
+interface MemberRowProps {
+  member: MemberOption;
+  isSelected: boolean;
+  step: AttendanceStep;
+  onClick: () => void;
+}
+function MemberRow({ member, isSelected, step, onClick }: MemberRowProps) {
+  const stepDot = isSelected && step !== "idle" ? (
+    <span className={cn(
+      "inline-block h-1.5 w-1.5 rounded-full",
+      step === "checked_out" ? "bg-green-500" :
+      step === "break_in" || step === "break_out" ? "bg-amber-500" :
+      "bg-blue-500"
+    )} />
+  ) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all",
+        isSelected
+          ? "bg-foreground text-background"
+          : "hover:bg-muted/60 text-foreground",
+      )}
+    >
+      <div className={cn(
+        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+        isSelected ? "bg-background/20 text-background" : "bg-muted text-foreground",
+      )}>
+        {member.label.charAt(0).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold truncate leading-tight">{member.label}</p>
+        <p className={cn("text-[10px] truncate leading-tight", isSelected ? "opacity-60" : "text-muted-foreground")}>
+          {member.department}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {stepDot}
+        {isSelected && <ChevronRight className="h-3 w-3 opacity-40" />}
+      </div>
     </button>
   );
 }
@@ -159,17 +216,18 @@ export function SingleForm({
   const [isHoliday, setIsHoliday] = useState(false);
   const [step, setStep] = useState<AttendanceStep>("idle");
   const [timestamps, setTimestamps] = useState<TimestampRecord>({
-    checkIn: null, breakIn: null, breakOut: null, checkOut: null
+    checkIn: null, breakIn: null, breakOut: null, checkOut: null,
   });
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // LOGIKA SUBMIT: Sinkronisasi ke form parent (WAJIB ADA)
+  // Sync timestamps ke form parent
   useEffect(() => {
     if (!form || !externalMemberId) return;
     form.setValue("memberId", externalMemberId);
     form.setValue("checkInDate", todayISO(timezone));
     form.setValue("status", "present");
-
     if (timestamps.checkIn) form.setValue("checkInTime", formatTime(timestamps.checkIn, timezone));
     if (timestamps.breakIn) form.setValue("breakStartTime", formatTime(timestamps.breakIn, timezone));
     if (timestamps.breakOut) form.setValue("breakEndTime", formatTime(timestamps.breakOut, timezone));
@@ -179,168 +237,364 @@ export function SingleForm({
     }
   }, [timestamps, externalMemberId, form, timezone]);
 
+  // Fetch schedule + cek existing attendance saat member berubah
   useEffect(() => {
     if (!externalMemberId) return;
     setStep("idle");
     setTimestamps({ checkIn: null, breakIn: null, breakOut: null, checkOut: null });
-    const fetchSchedule = async () => {
+    setSchedule(null);
+    setScheduleError(null);
+    setIsHoliday(false);
+
+    const init = async () => {
       setScheduleLoading(true);
-      const res = await getMemberSchedule(externalMemberId, todayISO(timezone));
+      const today = todayISO(timezone);
+      const [scheduleRes, attendanceRes] = await Promise.all([
+        getMemberSchedule(externalMemberId, today),
+        checkExistingAttendance(externalMemberId, today),
+      ]);
       setScheduleLoading(false);
-      if (res.success && res.data?.start_time) {
-        setSchedule(res.data as any);
-        setIsHoliday(false);
-        setScheduleError(null);
+
+      if (scheduleRes.success && scheduleRes.data?.start_time) {
+        setSchedule(scheduleRes.data as any);
       } else {
         setIsHoliday(true);
-        setScheduleError(res.message || "No schedule found");
+        setScheduleError(scheduleRes.message || "Non-working day");
+      }
+
+      if (attendanceRes.exists && (attendanceRes as any).data) {
+        const r = (attendanceRes as any).data;
+        setTimestamps({
+          checkIn: r.actual_check_in ?? null,
+          breakIn: r.actual_break_start ?? null,
+          breakOut: r.actual_break_end ?? null,
+          checkOut: r.actual_check_out ?? null,
+        });
+        if (r.actual_check_out) setStep("checked_out");
+        else if (r.actual_break_end) setStep("break_out");
+        else if (r.actual_break_start) setStep("break_in");
+        else if (r.actual_check_in) setStep("checked_in");
       }
     };
-    fetchSchedule();
+    init();
   }, [externalMemberId, timezone]);
 
   const isInBreakWindow = useCallback(() => {
     if (!schedule?.break_start || !schedule?.break_end) return false;
-    const current = currentMinutes(timezone);
-    const bStart = parseTimeToMinutes(schedule.break_start);
-    const bEnd = parseTimeToMinutes(schedule.break_end);
-    if (bStart === null || bEnd === null) return false;
-    return current >= bStart && current <= bEnd;
+    const cur = currentMinutes(timezone);
+    const bs = parseTimeToMinutes(schedule.break_start);
+    const be = parseTimeToMinutes(schedule.break_end);
+    if (bs === null || be === null) return false;
+    return cur >= bs && cur <= be;
   }, [schedule, timezone]);
 
   const handleCheckIn = async () => {
     setActionLoading("checkin");
     const existing = await checkExistingAttendance(externalMemberId, todayISO(timezone));
     if (existing.exists) {
-      toast.error("Attendance already exists for today");
+      toast.error("Already checked in today");
       setActionLoading(null);
       return;
     }
     setTimestamps(p => ({ ...p, checkIn: nowISO() }));
     setStep("checked_in");
-    toast.success("Check In recorded");
+    toast.success("Check In ✓");
     setActionLoading(null);
   };
 
-  const selectedMember = members.find((m) => m.id === externalMemberId);
-  const isDone = (targetStep: AttendanceStep) => stepIndex(step) > stepIndex(targetStep);
+  const handleBreakIn = () => {
+    setTimestamps(p => ({ ...p, breakIn: nowISO() }));
+    setStep("break_in");
+    toast.success("Break started");
+  };
+
+  const handleBreakOut = () => {
+    setTimestamps(p => ({ ...p, breakOut: nowISO() }));
+    setStep("break_out");
+    toast.success("Break ended");
+  };
+
+  const handleCheckOut = () => {
+    setTimestamps(p => ({ ...p, checkOut: nowISO() }));
+    setStep("checked_out");
+    toast.success("Check Out ✓ — click Save to finish");
+  };
+
+  const handleReset = () => {
+    setStep("idle");
+    setTimestamps({ checkIn: null, breakIn: null, breakOut: null, checkOut: null });
+    setSchedule(null);
+    setScheduleError(null);
+    setIsHoliday(false);
+    form?.reset();
+    dialogHandlers.setMemberDialogOpen(true);
+  };
+
+  // Filtered member list for inline search
+  const filteredMembers = members.filter(m =>
+    m.label.toLowerCase().includes(memberSearch.toLowerCase()) ||
+    m.department.toLowerCase().includes(memberSearch.toLowerCase())
+  );
+
+  const canCheckIn = !isHoliday && step === "idle" && !!externalMemberId && !!schedule;
+  const canBreakIn = !isHoliday && step === "checked_in" && !!schedule?.break_start && isInBreakWindow();
+  const canBreakOut = !isHoliday && step === "break_in";
+  const canCheckOut = !isHoliday && (step === "checked_in" || step === "break_out");
+
+  const selectedMember = members.find(m => m.id === externalMemberId);
 
   return (
-    <TabsContent value="single" className="space-y-5">
-      {/* ── Member selector ── */}
-      <Card className="border shadow-sm">
-        <CardContent className="pt-5 pb-5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            {selectedMember ? (
-              <>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
-                  {selectedMember.label.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate">{selectedMember.label}</p>
-                  <p className="text-xs text-muted-foreground truncate">{selectedMember.department}</p>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">No member selected</p>
-            )}
+    <TabsContent value="single" asChild>
+      {/* 
+        Layout: 2 kolom di desktop (member list | action panel)
+                1 kolom di mobile (action panel saja, member via dialog)
+      */}
+      <div className="flex gap-4 min-h-[480px]">
+
+        {/* ── LEFT: Member list (hidden on mobile, shown on md+) ── */}
+        <div className="hidden md:flex w-64 shrink-0 flex-col gap-2">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search member..."
+              value={memberSearch}
+              onChange={e => setMemberSearch(e.target.value)}
+              className="w-full rounded-xl border bg-background pl-8 pr-3 py-2 text-xs"
+            />
           </div>
-          <Button variant="outline" size="sm" onClick={() => dialogHandlers.setMemberDialogOpen(true)} className="shrink-0 gap-2">
-            <Search className="h-4 w-4" /> {selectedMember ? "Change Member" : "Select Member"}
-          </Button>
-        </CardContent>
-      </Card>
 
-      {/* ── Schedule info + live clock ── */}
-      {externalMemberId && (
-        <Card className="border shadow-sm">
-          <CardContent className="pt-4 pb-4 flex items-center justify-between">
-            {scheduleLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
-            ) : isHoliday ? (
-              <div className="flex items-center gap-2 text-sm text-amber-600"><CalendarOff className="h-4 w-4 shrink-0" /> <span>{scheduleError}</span></div>
-            ) : schedule ? (
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /><span className="font-medium text-foreground">{schedule.start_time?.slice(0, 5)} – {schedule.end_time?.slice(0, 5)}</span></div>
-                {schedule.break_start && <div className="flex items-center gap-1.5"><Coffee className="h-3.5 w-3.5" /><span>Break: <span className="font-medium text-foreground">{schedule.break_start.slice(0, 5)} – {schedule.break_end?.slice(0, 5)}</span></span></div>}
-              </div>
-            ) : null}
-            <div className="flex items-center gap-1.5 text-muted-foreground ml-auto">
-              <Timer className="h-3.5 w-3.5" />
-              <LiveClock timezone={timezone} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Step progress bar ── */}
-      {externalMemberId && !isHoliday && (
-        <div className="flex items-start gap-1 px-1">
-          {(Object.keys(STEP_LABELS) as Exclude<AttendanceStep, "idle">[]).map((s, i, arr) => {
-            const idx = stepIndex(s);
-            const currentIdx = stepIndex(step);
-            return (
-              <div key={s} className="flex items-center flex-1">
-                <div className="flex flex-col items-center flex-1">
-                  <div className={cn("h-1.5 w-full rounded-full transition-all duration-300", currentIdx > idx ? "bg-primary" : currentIdx === idx ? "bg-primary/40" : "bg-muted")} />
-                  <span className={cn("mt-1.5 text-[10px] font-medium", currentIdx >= idx ? "text-primary" : "text-muted-foreground")}>{STEP_LABELS[s]}</span>
-                </div>
-                {i < arr.length - 1 && <div className="w-1 shrink-0" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── 4 Action buttons ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <ActionButton label="Check In" icon={<LogIn className="h-6 w-6" />} onClick={handleCheckIn} done={isDone("checked_in")} disabled={isHoliday || step !== "idle" || !externalMemberId} loading={actionLoading === "checkin"} sublabel={timestamps.checkIn ? formatTime(timestamps.checkIn, timezone) : "Tap to start"} />
-        <ActionButton label="Break In" icon={<Coffee className="h-6 w-6" />} onClick={() => { setTimestamps(p => ({ ...p, breakIn: nowISO() })); setStep("break_in"); }} done={isDone("break_in")} disabled={step !== "checked_in" || !isInBreakWindow()} sublabel={timestamps.breakIn ? formatTime(timestamps.breakIn, timezone) : schedule?.break_start ? `From ${schedule.break_start.slice(0, 5)}` : "No break"} />
-        <ActionButton label="Break Out" icon={<Coffee className="h-6 w-6" />} onClick={() => { setTimestamps(p => ({ ...p, breakOut: nowISO() })); setStep("break_out"); }} done={isDone("break_out")} disabled={step !== "break_in"} sublabel={timestamps.breakOut ? formatTime(timestamps.breakOut, timezone) : "End break"} />
-        <ActionButton label="Check Out" icon={<LogOut className="h-6 w-6" />} onClick={() => { setTimestamps(p => ({ ...p, checkOut: nowISO() })); setStep("checked_out"); }} done={isDone("checked_out")} disabled={step !== "checked_in" && step !== "break_out"} sublabel={timestamps.checkOut ? formatTime(timestamps.checkOut, timezone) : "Tap to finish"} />
-      </div>
-
-      {/* ── Timestamp summary ── */}
-      {step !== "idle" && (
-        <Card className="border shadow-sm bg-muted/30">
-          <CardContent className="pt-4 pb-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-sm">
-            {[
-              { label: "Check In", value: timestamps.checkIn, color: "text-emerald-600 dark:text-emerald-400" },
-              { label: "Break In", value: timestamps.breakIn, color: "text-amber-600 dark:text-amber-400" },
-              { label: "Break Out", value: timestamps.breakOut, color: "text-blue-600 dark:text-blue-400" },
-              { label: "Check Out", value: timestamps.checkOut, color: "text-red-600 dark:text-red-400" },
-            ].map((item) => (
-              <div key={item.label} className="space-y-1">
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-                <p className={cn("font-mono font-semibold tabular-nums", item.value ? item.color : "text-muted-foreground/40")}>{formatTime(item.value, timezone)}</p>
-              </div>
+          {/* Member list */}
+          <div className="flex-1 overflow-y-auto space-y-0.5 pr-0.5 max-h-[420px]">
+            {filteredMembers.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-8">No members found</p>
+            ) : filteredMembers.map(m => (
+              <MemberRow
+                key={m.id}
+                member={m}
+                isSelected={m.id === externalMemberId}
+                step={m.id === externalMemberId ? step : "idle"}
+                onClick={() => {
+                  // Simulate MemberDialog selection via form
+                  form?.setValue("memberId", m.id, { shouldValidate: true });
+                  form?.clearErrors("memberId");
+                }}
+              />
             ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Remarks ── */}
-      {step !== "idle" && step !== "checked_out" && (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Notes (Optional)</Label>
-          <Textarea value={form?.watch("remarks") || ""} onChange={(e) => form?.setValue("remarks", e.target.value)} placeholder="Add any notes..." rows={2} className="resize-none" />
+          </div>
         </div>
-      )}
 
-      {/* ── Hints ── */}
-      {step === "checked_in" && schedule?.break_start && !isInBreakWindow() && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>Break In available at: <strong>{schedule.break_start.slice(0, 5)} – {schedule.break_end?.slice(0, 5)}</strong></span>
-        </div>
-      )}
+        {/* ── RIGHT: Action panel ── */}
+        <div className="flex-1 flex flex-col gap-3 min-w-0">
 
-      {step === "checked_out" && (
-        <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <span className="font-medium">Attendance captured. Click the "Save" button below to finish.</span>
+          {/* Mobile: member selector button */}
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => dialogHandlers.setMemberDialogOpen(true)}
+              className="w-full flex items-center gap-3 rounded-xl border-2 border-dashed px-4 py-3 text-left hover:border-foreground/40 transition-colors"
+            >
+              {selectedMember ? (
+                <>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-xs font-bold">
+                    {selectedMember.label.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold truncate">{selectedMember.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{selectedMember.department}</p>
+                  </div>
+                  <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Tap to select member...</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Schedule info bar */}
+          {externalMemberId && (
+            <div className={cn(
+              "flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-xs",
+              isHoliday ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800" :
+              schedule ? "bg-muted/40 border border-border" :
+              "bg-muted/20 border border-border"
+            )}>
+              {scheduleLoading ? (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading...
+                </span>
+              ) : isHoliday ? (
+                <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                  <CalendarOff className="h-3.5 w-3.5" /> {scheduleError || "Non-working day"}
+                </span>
+              ) : schedule ? (
+                <span className="flex items-center gap-3 text-muted-foreground flex-wrap">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <span className="font-medium text-foreground">
+                      {schedule.start_time?.slice(0, 5)} – {schedule.end_time?.slice(0, 5)}
+                    </span>
+                  </span>
+                  {schedule.break_start && (
+                    <span className="flex items-center gap-1">
+                      <Coffee className="h-3 w-3" />
+                      <span>{schedule.break_start.slice(0, 5)} – {schedule.break_end?.slice(0, 5)}</span>
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+              <span className="flex items-center gap-1 text-muted-foreground shrink-0 ml-auto">
+                <LiveClock timezone={timezone} />
+              </span>
+            </div>
+          )}
+
+          {/* No member selected placeholder */}
+          {!externalMemberId && (
+            <div className="flex-1 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border py-12 text-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                <Search className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Select a member</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Choose from the list on the left or tap search
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="md:hidden gap-2"
+                onClick={() => dialogHandlers.setMemberDialogOpen(true)}
+              >
+                <Search className="h-3.5 w-3.5" /> Select Member
+              </Button>
+            </div>
+          )}
+
+          {/* 4 Action Buttons — main interaction area */}
+          {externalMemberId && (
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
+              <ActionBtn
+                label="Check In"
+                time={timestamps.checkIn}
+                icon={<LogIn className="h-5 w-5" />}
+                onClick={handleCheckIn}
+                disabled={!canCheckIn}
+                loading={actionLoading === "checkin"}
+                done={isDone(step, "checked_in")}
+                active={step === "idle" && canCheckIn}
+                tz={timezone}
+              />
+              <ActionBtn
+                label="Break In"
+                time={timestamps.breakIn}
+                icon={<Coffee className="h-5 w-5" />}
+                onClick={handleBreakIn}
+                disabled={!canBreakIn}
+                loading={false}
+                done={isDone(step, "break_in")}
+                active={step === "checked_in" && canBreakIn}
+                tz={timezone}
+              />
+              <ActionBtn
+                label="Break Out"
+                time={timestamps.breakOut}
+                icon={<Coffee className="h-5 w-5" />}
+                onClick={handleBreakOut}
+                disabled={!canBreakOut}
+                loading={false}
+                done={isDone(step, "break_out")}
+                active={step === "break_in"}
+                tz={timezone}
+              />
+              <ActionBtn
+                label="Check Out"
+                time={timestamps.checkOut}
+                icon={<LogOut className="h-5 w-5" />}
+                onClick={handleCheckOut}
+                disabled={!canCheckOut}
+                loading={false}
+                done={isDone(step, "checked_out")}
+                active={canCheckOut}
+                tz={timezone}
+              />
+            </div>
+          )}
+
+          {/* Step progress — slim bar */}
+          {externalMemberId && !isHoliday && (
+            <div className="flex gap-1">
+              {(["checked_in", "break_in", "break_out", "checked_out"] as const).map((s) => {
+                const idx = stepIndex(s);
+                const cur = stepIndex(step);
+                return (
+                  <div key={s} className="flex-1 flex flex-col gap-1">
+                    <div className={cn(
+                      "h-1 rounded-full transition-all duration-300",
+                      cur > idx ? "bg-foreground" : cur === idx ? "bg-foreground/30" : "bg-border"
+                    )} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Break window hint */}
+          {step === "checked_in" && schedule?.break_start && !isInBreakWindow() && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5 text-xs text-amber-700 dark:text-amber-400">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>Break available <strong>{schedule.break_start.slice(0, 5)} – {schedule.break_end?.slice(0, 5)}</strong></span>
+            </div>
+          )}
+
+          {/* Notes — only show when active session */}
+          {externalMemberId && step !== "idle" && step !== "checked_out" && (
+            <Textarea
+              value={form?.watch("remarks") || ""}
+              onChange={(e) => form?.setValue("remarks", e.target.value)}
+              placeholder="Notes (optional)..."
+              rows={2}
+              className="resize-none text-xs"
+            />
+          )}
+
+          {/* Done state — next member CTA */}
+          {step === "checked_out" && (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                <span className="font-medium">Done — click <strong>Save</strong> then next member</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
+                className="gap-1.5 shrink-0"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Next
+              </Button>
+            </div>
+          )}
+
+          {/* Holiday state */}
+          {isHoliday && externalMemberId && (
+            <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+              <CalendarOff className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>All actions disabled — non-working day per schedule.</span>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </TabsContent>
   );
 }

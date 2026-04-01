@@ -22,168 +22,11 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { AnimatePresence, motion } from "framer-motion"
 import {
-  Search, RotateCcw, Plus, Download, Edit, Trash2, CheckCircle2, Timer, XCircle, AlertCircle,
+  Search, RotateCcw, Plus, Download, Edit, Trash2,
 } from "lucide-react"
-import { UserAvatar } from "@/components/profile&image/user-avatar"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { cn } from "@/lib/utils"
-import { formatLocalTime } from "@/utils/date-helper"
-
-interface AttendanceRowProps {
-  record: AttendanceListItem
-  isSelected: boolean
-  onToggleSelect: (id: string, checked: boolean) => void
-  onEdit: () => void
-  onDelete: () => void
-  showLocation: boolean
-  checkInDisplay: { date: string; time: string; method: string }
-  checkOutDisplay: { date: string; time: string; method: string }
-  breakInDisplay: { date: string; time: string; method: string }
-  breakOutDisplay: { date: string; time: string; method: string }
-}
-
-const AttendanceRowPure: React.FC<AttendanceRowProps> = ({
-  record, isSelected, onToggleSelect, onEdit, onDelete,
-  checkInDisplay, checkOutDisplay, breakInDisplay, breakOutDisplay
-}) => {
-  const getStatusColor = (status: string): string => {
-    const colors: Record<string, string> = {
-      present: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-      late: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-      absent: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-      leave: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-      early_leave: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-      excused: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    }
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'present': return <CheckCircle2 className="h-3 w-3" />;
-      case 'late': return <Timer className="h-3 w-3" />;
-      case 'absent': return <XCircle className="h-3 w-3" />;
-      default: return <AlertCircle className="h-3 w-3" />;
-    }
-  };
-
-  return (
-    <tr className={cn(
-      "border-b transition-colors cursor-pointer custom-hover-row",
-      isSelected && "bg-blue-50 dark:bg-blue-950/50"
-    )}>
-      <td className="p-3">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={(e) => onToggleSelect(record.id, e.target.checked)}
-          className="rounded"
-        />
-      </td>
-
-      <td className="p-3">
-        <div className="flex items-center gap-3">
-          <UserAvatar
-            name={record.member?.name || ''}
-            photoUrl={record.member?.avatar}
-            userId={record.member?.userId}
-            size={8}
-          />
-          <div>
-            <p className="font-medium text-sm">
-              <Link href={`/members/${record.member?.id ?? ""}`} className="hover:underline">
-                {record.member?.name || 'Unknown'}
-              </Link>
-            </p>
-            <p className="text-xs text-muted-foreground">{record.member?.email || 'no email'}</p>
-          </div>
-        </div>
-      </td>
-
-      <td className="p-3">
-        <p className="font-medium text-xs">{record.member?.department || '-'}</p>
-      </td>
-
-      <td className="p-3">
-        <div className="flex flex-col text-xs font-mono">
-          <span className="font-medium whitespace-nowrap">{checkInDisplay.date}</span>
-          <span className="text-muted-foreground">{checkInDisplay.time}</span>
-          {checkInDisplay.method && (
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-              {checkInDisplay.method}
-            </span>
-          )}
-        </div>
-      </td>
-
-      <td className="p-3">
-        <div className="flex flex-col text-xs font-mono">
-          <span className="font-medium whitespace-nowrap">{checkOutDisplay.date}</span>
-          <span className="text-muted-foreground">{checkOutDisplay.time}</span>
-          {checkOutDisplay.method && (
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-              {checkOutDisplay.method}
-            </span>
-          )}
-        </div>
-      </td>
-
-      <td className="p-3">
-        <div className="flex flex-col text-xs font-mono">
-          <span className="font-medium whitespace-nowrap">{breakInDisplay.date}</span>
-          <span className="text-muted-foreground">{breakInDisplay.time}</span>
-          {breakInDisplay.method && (
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-              {breakInDisplay.method}
-            </span>
-          )}
-        </div>
-      </td>
-
-      <td className="p-3">
-        <div className="flex flex-col text-xs font-mono">
-          <span className="font-medium whitespace-nowrap">{breakOutDisplay.date}</span>
-          <span className="text-muted-foreground">{breakOutDisplay.time}</span>
-          {breakOutDisplay.method && (
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-              {breakOutDisplay.method}
-            </span>
-          )}
-        </div>
-      </td>
-
-      <td className="p-3">
-        <span className="font-medium text-xs">{record.workHours || '0h'}</span>
-      </td>
-
-      <td className="p-3">
-        <Badge className={cn("gap-1 px-2 py-0.5 text-xs", getStatusColor(record.status))}>
-          {getStatusIcon(record.status)}
-          <span className="capitalize">
-            {record.status
-              ? record.status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-              : "Unknown"}
-          </span>
-        </Badge>
-      </td>
-
-      <td className="p-3">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" title="Edit" onClick={onEdit}>
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" title="Delete" onClick={onDelete} className="text-destructive hover:text-destructive">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  )
-}
-
-const AttendanceRow = React.memo(AttendanceRowPure)
+import { AttendanceTable } from "@/components/attendance/list/table"
 
 function AttendanceListPage() {
   const orgStore = useOrgStore()
@@ -360,65 +203,6 @@ function AttendanceListPage() {
     )
   }, [data.items])
 
-  const visibleRows = useMemo(() => {
-    if (!isMounted) return []
-
-    return data.items.map((record) => {
-      const format = (utc: string | null) => {
-        if (!utc) return { date: '-', time: '-' };
-        const formatted = formatLocalTime(utc, userTimezone, "24h", true);
-        const parts = formatted.split(', ');
-        return {
-          date: parts[0] || '-',
-          time: parts[1] || '-'
-        };
-      };
-
-      // PERBAIKAN LOGIKA: Hanya tampilkan method jika jam (timestamp) ada
-      const checkInDisplay = { 
-        ...format(record.checkIn), 
-        method: record.checkIn ? (record.checkInMethod || '') : '' 
-      };
-      const checkOutDisplay = { 
-        ...format(record.checkOut), 
-        method: record.checkOut ? (record.checkOutMethod || '') : '' 
-      };
-      const breakInDisplay = { 
-        ...format(record.actualBreakStart), 
-        method: record.actualBreakStart ? (record.breakInMethod || '') : '' 
-      };
-      const breakOutDisplay = { 
-        ...format(record.actualBreakEnd), 
-        method: record.actualBreakEnd ? (record.breakOutMethod || '') : '' 
-      };
-
-      return (
-        <AttendanceRow
-          key={record.id}
-          record={record}
-          isSelected={selectedIds.has(record.id)}
-          onToggleSelect={toggleSelect}
-          onEdit={() => {
-            setEditTarget(record)
-            setEditIn(record.checkIn ?? "")
-            setEditOut(record.checkOut ?? "")
-            setEditRemarks("")
-            setEditOpen(true)
-          }}
-          onDelete={() => {
-            setConfirmState({ mode: "single", id: record.id })
-            setConfirmOpen(true)
-          }}
-          showLocation={false}
-          checkInDisplay={checkInDisplay}
-          checkOutDisplay={checkOutDisplay}
-          breakInDisplay={breakInDisplay}
-          breakOutDisplay={breakOutDisplay}
-        />
-      )
-    })
-  }, [data.items, userTimezone, selectedIds, toggleSelect, isMounted])
-
   const handleDeleteMultiple = useCallback(() => {
     if (selectedIds.size === 0) {
       toast.info("No records selected")
@@ -472,6 +256,7 @@ function AttendanceListPage() {
           <h1 className="text-xl font-semibold">Attendance list</h1>
         </div>
 
+        {/* Filter Bar */}
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-2 flex-wrap">
           <div className="w-full md:flex-1 md:min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -608,70 +393,26 @@ function AttendanceListPage() {
       </div>
 
       <div className="mt-4">
-        <div className="overflow-x-auto w-full border rounded-lg">
-          <table className="w-full min-w-[880px]">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="p-3 text-left w-10">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === data.items.length && data.items.length > 0}
-                    onChange={() => selectAll()}
-                    className="rounded"
-                  />
-                </th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Member</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Group</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Check In</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Check Out</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Break In</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Break Out</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider whitespace-nowrap">Work Hours</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-                <th className="p-3 text-left text-xs font-medium uppercase tracking-wider w-20">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={`skel-${i}`} className="border-b">
-                    <td className="p-3"><Skeleton className="h-4 w-4 rounded" /></td>
-                    <td className="p-3">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="space-y-1">
-                          <Skeleton className="h-3 w-32" />
-                          <Skeleton className="h-2 w-24" />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-3"><Skeleton className="h-3 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-8 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-8 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-8 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-8 w-16" /></td>
-                    <td className="p-3"><Skeleton className="h-3 w-10" /></td>
-                    <td className="p-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        <Skeleton className="h-8 w-8 rounded" />
-                        <Skeleton className="h-8 w-8 rounded" />
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : data.items.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm italic">
-                    No attendance records found
-                  </td>
-                </tr>
-              ) : (
-                visibleRows
-              )}
-            </tbody>
-          </table>
-        </div>
+        <AttendanceTable
+          items={data.items}
+          loading={loading || !isMounted || !orgId}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onSelectAll={selectAll}
+          userTimezone={userTimezone}
+          isMounted={isMounted}
+          onEdit={(record) => {
+            setEditTarget(record)
+            setEditIn(record.checkIn ?? "")
+            setEditOut(record.checkOut ?? "")
+            setEditRemarks("")
+            setEditOpen(true)
+          }}
+          onDelete={(id) => {
+            setConfirmState({ mode: "single", id })
+            setConfirmOpen(true)
+          }}
+        />
 
         {!loading && data.total > queryParams.limit && (
           <div className="mt-4">

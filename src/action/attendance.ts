@@ -593,24 +593,31 @@ export async function checkExistingAttendance(
       return { success: false, exists: false };
     }
 
-    // Log for debugging
     attendanceLogger.debug(`🔍 Checking attendance for member ${memberId} on ${attendance_date}`);
 
+    // PERBAIKAN: Ambil semua kolom waktu yang dibutuhkan oleh UI
     const { data, error } = await supabase
       .from("attendance_records")
-      .select("id")
+      .select("id, actual_check_in, actual_check_out, actual_break_start, actual_break_end, status")
       .eq("organization_member_id", memberId)
       .eq("attendance_date", attendance_date)
       .maybeSingle();
 
     if (error) {
-      attendanceLogger.error("❌ Error checking attendance:", error);
+      attendanceLogger.error("❌ Database error checking attendance:", error);
       return { success: false, exists: false };
     }
 
     const exists = !!data;
     attendanceLogger.debug(`✓ Attendance check result: exists=${exists}`);
-    return { success: true, exists };
+    
+    // PERBAIKAN: Kembalikan 'exists' (pakai 's') dan sertakan 'data'
+    return { 
+      success: true, 
+      exists: exists, 
+      data: data 
+    };
+
   } catch (err) {
     attendanceLogger.error("❌ Exception checking attendance:", err);
     return { success: false, exists: false };

@@ -1,8 +1,6 @@
 "use client";
 
-// src/components/organization/settings/PreferencesCard.tsx
-// Timezone dan currency di-fetch dari API — tidak hardcoded
-
+import { useState, useEffect, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -11,8 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
-import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -34,10 +30,11 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Clock, Loader2, Check, ChevronsUpDown } from "@/components/icons/lucide-exports";
+import { Clock, Loader2, Check, ChevronsUpDown, Globe, Coins, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { useTimezones, useCurrencies } from "@/hooks/organization/settings/use-select-option";
+import { getDynamicDateFormatOptions } from "@/lib/constants/date-formats";
 import type { OrgSettingsFormData } from "@/types/organization/org-settings";
 
 interface PreferencesCardProps {
@@ -50,6 +47,9 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
   const [tzPopoverOpen, setTzPopoverOpen] = useState(false);
   const [curPopoverOpen, setCurPopoverOpen] = useState(false);
 
+  // Generate opsi format tanggal dinamis (menampilkan tanggal hari ini)
+  const dateOptions = useMemo(() => getDynamicDateFormatOptions(), []);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -60,15 +60,16 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
   const isTzLoading = loadingTz || !mounted;
   const isCurLoading = loadingCur || !mounted;
 
-  // Group timezone berdasarkan region untuk UX lebih baik
-  const timezoneGroups = timezones
-    ? timezones.reduce<Record<string, typeof timezones>>((acc, tz) => {
+  // Group timezone berdasarkan region untuk UX yang lebih rapi
+  const timezoneGroups = useMemo(() => {
+    if (!timezones) return {};
+    return timezones.reduce<Record<string, typeof timezones>>((acc, tz) => {
       const region = tz.region || "Other";
       if (!acc[region]) acc[region] = [];
       acc[region].push(tz);
       return acc;
-    }, {})
-    : {};
+    }, {});
+  }, [timezones]);
 
   return (
     <Card className="border shadow-sm">
@@ -77,18 +78,20 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
           <Clock className="h-5 w-5 text-primary" />
           Preferences
         </CardTitle>
-        <CardDescription>Timezone, currency, and time format settings</CardDescription>
+        <CardDescription>
+          Configure how time, currency, and dates are displayed across your organization.
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         {/* Timezone */}
         <div className="space-y-2">
-          <Label htmlFor="org-timezone" className="text-sm font-medium flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
             Timezone
           </Label>
           {isTzLoading ? (
-            <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground bg-muted/20">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading timezones...
             </div>
@@ -98,11 +101,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={tzPopoverOpen}
-                  className={cn(
-                    "w-full justify-between h-10 font-normal",
-                    "min-w-fit flex-shrink-0"
-                  )}
+                  className="w-full justify-between h-10 font-normal bg-background"
                 >
                   <span className="truncate">
                     {timezones?.find((tz) => tz.value === formData.timezone)?.label || "Select timezone..."}
@@ -146,11 +145,12 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
 
         {/* Currency */}
         <div className="space-y-2">
-          <Label htmlFor="org-currency" className="text-sm font-medium">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Coins className="h-3.5 w-3.5 text-muted-foreground" />
             Currency
           </Label>
           {isCurLoading ? (
-            <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 h-10 px-3 border rounded-md text-sm text-muted-foreground bg-muted/20">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading currencies...
             </div>
@@ -160,11 +160,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={curPopoverOpen}
-                  className={cn(
-                    "w-full justify-between h-10 font-normal",
-                    "min-w-fit flex-shrink-0"
-                  )}
+                  className="w-full justify-between h-10 font-normal bg-background"
                 >
                   <span className="truncate">
                     {currencies?.find((cur) => cur.code === formData.currency_code)?.label || "Select currency..."}
@@ -204,24 +200,51 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
           )}
         </div>
 
+        {/* --- BARIS 2: TIME FORMAT & DATE FORMAT --- */}
+
         {/* Time Format */}
         <div className="space-y-2">
-          <Label htmlFor="org-time-format" className="text-sm font-medium">
+          <Label htmlFor="org-time-format" className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             Time Format
           </Label>
           <Select
             value={formData.time_format}
             onValueChange={(value) => onChange({ time_format: value as "12h" | "24h" })}
           >
-            <SelectTrigger id="org-time-format" className="h-10">
-              <SelectValue />
+            <SelectTrigger id="org-time-format" className="h-10 bg-background">
+              <SelectValue placeholder="Select time format" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="12h">12-hour (1:00 PM)</SelectItem>
+              <SelectItem value="12h">12-hour (01:00 PM)</SelectItem>
               <SelectItem value="24h">24-hour (13:00)</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {/* Date Format */}
+        <div className="space-y-2">
+          <Label htmlFor="org-date-format" className="text-sm font-medium flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+            Date Format
+          </Label>
+          <Select
+            value={(formData as any).date_format || "DD/MM/YYYY"}
+            onValueChange={(value) => onChange({ date_format: value } as any)}
+          >
+            <SelectTrigger id="org-date-format" className="h-10 bg-background">
+              <SelectValue placeholder="Select date format" />
+            </SelectTrigger>
+            <SelectContent>
+              {dateOptions.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
       </CardContent>
     </Card>
   );
