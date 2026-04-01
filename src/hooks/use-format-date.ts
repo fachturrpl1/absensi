@@ -1,35 +1,51 @@
-import { useQuery } from "@tanstack/react-query";
-import { formatLocalTime } from "@/utils/date-helper";
-import { useState, useEffect } from "react";
-
-// Ganti sesuai cara Anda mendapatkan userId (misal dari session auth)
-const userId = "user-123"; 
+import { useQuery } from "@tanstack/react-query"
+import { formatLocalTime } from "@/utils/timezone"
+import { useState, useEffect } from "react"
+import { createClient } from "@/utils/supabase/client"
+import { useOrgStore } from "@/store/org-store"
 
 export function useFormatDate() {
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(false)
+  
+  // Ambil ID organisasi yang sedang aktif saat ini
+  const { organizationId } = useOrgStore()
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
-  // Fetch timezone organisasi dari API Route yang baru Anda pindahkan
-  const { data: orgSettings } = useQuery({
-    queryKey: ["org-timezone", userId],
+  const { data: timezone } = useQuery({
+    queryKey: ["org-timezone", organizationId],
     queryFn: async () => {
-      const res = await fetch(`/api/org-timezone?userId=${userId}`);
-      return res.json();
-    },
-    staleTime: Infinity, // Timezone jarang berubah
-  });
+      if (!organizationId) return "UTC"
+      
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("timezone")
+        .eq("id", organizationId)
+        .single() // Aman menggunakan single karena ID Organisasi bersifat unik
 
-  const timezone = orgSettings?.timezone || "UTC";
-  // Anda juga bisa menambah fetch untuk 'time_format' (12h/24h) di sini
-  const timeFormat = "24h"; 
+      if (error || !data?.timezone) {
+        console.error("Gagal menarik zona waktu:", error)
+        return "UTC"
+      }
+      
+      return data.timezone
+    },
+    // Hanya jalankan query jika organizationId sudah tersedia
+    enabled: !!organizationId,
+    staleTime: 1000 * 60 * 5
+  })
+
+  // Pastikan fallback aman jika masih loading
+  const finalTimezone = timezone || "UTC"
+  const timeFormat = "24h"
 
   const formatDate = (utcString: string | null | undefined, includeDate: boolean = true) => {
-    if (!mounted) return "-"; // Cegah hydration error
-    return formatLocalTime(utcString, timezone, timeFormat, includeDate);
-  };
+    if (!mounted) return "-"
+    return formatLocalTime(utcString, finalTimezone, timeFormat, includeDate)
+  }
 
-  return { formatDate, timezone, isLoaded: mounted };
+  return { formatDate, timezone: finalTimezone, isLoaded: mounted }
 }

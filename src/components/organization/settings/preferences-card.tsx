@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+
 import { useState, useEffect } from "react";
 import {
   Select,
@@ -80,7 +80,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
         <CardDescription>Timezone, currency, and time format settings</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
         {/* Timezone */}
         <div className="space-y-2">
           <Label htmlFor="org-timezone" className="text-sm font-medium flex items-center gap-2">
@@ -100,7 +100,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                   role="combobox"
                   aria-expanded={tzPopoverOpen}
                   className={cn(
-                    "w-full md:w-1/4 justify-between h-10 font-normal",
+                    "w-full justify-between h-10 font-normal",
                     "min-w-fit flex-shrink-0"
                   )}
                 >
@@ -162,7 +162,7 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
                   role="combobox"
                   aria-expanded={curPopoverOpen}
                   className={cn(
-                    "w-full md:w-1/4 justify-between h-10 font-normal",
+                    "w-full justify-between h-10 font-normal",
                     "min-w-fit flex-shrink-0"
                   )}
                 >
@@ -203,8 +203,6 @@ export function PreferencesCard({ formData, onChange }: PreferencesCardProps) {
             </Popover>
           )}
         </div>
-
-        <Separator />
 
         {/* Time Format */}
         <div className="space-y-2">

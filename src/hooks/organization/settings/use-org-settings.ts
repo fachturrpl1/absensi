@@ -368,15 +368,13 @@ export function useOrgSettings() {
         };
 
         const result = await updateOrganization(String(orgStore.organizationId), payload as any);
-
         if (result.success) {
           toast.success("Organization settings updated successfully!");
 
-          // ✅ Reset lastInitializedOrgId agar setelah refetch,
-          // formData di-populate ulang dari data server terbaru
           lastInitializedOrgId.current = null;
 
           queryClient.invalidateQueries({ queryKey: ["organization"] });
+          queryClient.invalidateQueries({ queryKey: ["org-timezone"] });
           await refetchOrg();
           return true;
         } else {

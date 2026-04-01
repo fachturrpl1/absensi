@@ -74,7 +74,6 @@ export default function SetupWizard() {
 
       // Set organization in stores
       orgStore.setOrganizationId(1, wizardStore.orgInfo.name) // ID will come from API
-      orgStore.setTimezone(wizardStore.orgInfo.timezone)
 
       // Reset wizard
       wizardStore.reset()
