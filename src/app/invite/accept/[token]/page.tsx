@@ -35,7 +35,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+
 
 import { getInvitationByToken, acceptInvitation } from "@/action/invitations";
 import { IMemberInvitation } from "@/interface";
