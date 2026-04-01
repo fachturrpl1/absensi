@@ -22,7 +22,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { AnimatePresence, motion } from "framer-motion"
 import {
-  Search, RotateCcw, Plus, Download, Edit, Trash2,
+  Search, RotateCcw, Plus, Download, Trash2, Users
 } from "lucide-react"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
 import { cn } from "@/lib/utils"
@@ -108,14 +108,7 @@ function AttendanceListPage() {
         ...(deferredSearch?.trim().length >= 2 && { search: deferredSearch.trim() })
       })
 
-      const res = await fetch(`/api/attendance-records?${params}`, {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache'
-        }
-      })
-
+      const res = await fetch(`/api/attendance-records?${params}`, { cache: 'no-store' })
       const result = await res.json() as GetAttendanceResult
       if (result.success) {
         return { items: result.data, total: result.meta?.total || result.data.length }
@@ -123,7 +116,6 @@ function AttendanceListPage() {
       return { items: [], total: 0 }
     },
     enabled: !!orgId,
-    staleTime: 5000,
   })
 
   const data = queryData || { items: [], total: 0 }
@@ -131,16 +123,11 @@ function AttendanceListPage() {
   useEffect(() => {
     if (data.items.length > 0) {
       const nextTz = data.items[0]?.timezone ?? "UTC"
-      setUserTimezone(prev => prev === nextTz ? prev : nextTz)
-
+      setUserTimezone(nextTz)
       const uniqueDepts = Array.from(new Set(
-        data.items.map(r => r.member?.department).filter((d): d is string => typeof d === 'string' && d !== "" && d !== "No Department")
+        data.items.map(r => r.member?.department).filter((d): d is string => !!d && d !== "No Department")
       )).sort()
-
-      setDepartments(prev => {
-        const same = prev.length === uniqueDepts.length && prev.every((d, i) => d === uniqueDepts[i])
-        return same ? prev : uniqueDepts
-      })
+      setDepartments(uniqueDepts)
     }
   }, [data.items])
 
@@ -149,75 +136,42 @@ function AttendanceListPage() {
       const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
       return dt.toISOString().slice(0, 10)
     }
-    try {
-      return formatInTimeZone(d, tz, "yyyy-MM-dd")
-    } catch {
-      const dt = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-      return dt.toISOString().slice(0, 10)
-    }
+    return formatInTimeZone(d, tz, "yyyy-MM-dd")
   }
 
-const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
-  setQueryParams(prev => {
-    const next = { ...prev, ...updates };
-    if (!updates.hasOwnProperty('page')) {
-      next.page = 1;
-    }
-    
-    return next;
-  });
-}, []);
+  const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
+    setQueryParams(prev => {
+      const next = { ...prev, ...updates };
+      if (!updates.hasOwnProperty('page')) next.page = 1;
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!orgId) return
-
     const supabase = createClient()
     const channel = supabase.channel('attendance_realtime_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'attendance_records'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['attendance'] })
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, 
+      () => queryClient.invalidateQueries({ queryKey: ['attendance'] }))
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [orgId, queryClient])
 
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
+  useEffect(() => { setIsMounted(true) }, [])
 
   const toggleSelect = useCallback((id: string, checked: boolean) => {
     setSelectedIds(prev => {
       const next = new Set(prev)
-      if (checked) next.add(id)
-      else next.delete(id)
+      if (checked) next.add(id); else next.delete(id);
       return next
     })
   }, [])
 
   const selectAll = useCallback(() => {
     setSelectedIds(prev =>
-      prev.size === data.items.length
-        ? new Set()
-        : new Set(data.items.map(r => r.id))
+      prev.size === data.items.length ? new Set() : new Set(data.items.map(r => r.id))
     )
   }, [data.items])
-
-  const handleDeleteMultiple = useCallback(() => {
-    if (selectedIds.size === 0) {
-      toast.info("No records selected")
-      return
-    }
-    setConfirmState({ mode: "bulk" })
-    setConfirmOpen(true)
-  }, [selectedIds.size])
 
   const submitEdit = async () => {
     if (!editTarget) return
@@ -225,21 +179,15 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
       setIsSubmitting(true)
       const res = await updateAttendanceRecord({
         id: editTarget.id,
-        actual_check_in: editIn.trim() === "" ? null : editIn.trim(),
-        actual_check_out: editOut.trim() === "" ? null : editOut.trim(),
-        remarks: editRemarks.trim() === "" ? null : editRemarks.trim(),
+        actual_check_in: editIn.trim() || null,
+        actual_check_out: editOut.trim() || null,
+        remarks: editRemarks.trim() || null,
       })
-
       if (res.success) {
         toast.success("Record updated")
         setEditOpen(false)
-        setEditTarget(null)
         queryClient.invalidateQueries({ queryKey: ['attendance'] })
-      } else {
-        toast.error(res.message || "Failed to update record")
       }
-    } catch (e) {
-      toast.error("Failed to update record")
     } finally {
       setIsSubmitting(false)
     }
@@ -247,23 +195,11 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
 
   return (
     <>
-      <style jsx global>{`
-        .custom-hover-row:hover,
-        .custom-hover-row:hover > td {
-          background-color: #f4f4f5 !important;
-        }
-        .dark .custom-hover-row:hover,
-        .dark .custom-hover-row:hover > td {
-          background-color: #27272a !important;
-        }
-      `}</style>
-
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Attendance list</h1>
         </div>
 
-        {/* Filter Bar */}
         <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-2 flex-wrap">
           <div className="w-full md:flex-1 md:min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -280,7 +216,7 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
               dateRange={{
                 from: new Date(queryParams.dateFrom),
                 to: new Date(queryParams.dateTo),
-                preset: "custom" as const
+                preset: "custom"
               }}
               onDateRangeChange={({ from, to }) =>
                 updateQueryParams({
@@ -294,54 +230,47 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
 
           <div className="flex w-full md:w-auto gap-2 shrink-0">
             <div className="flex-1 md:w-auto">
-              {isMounted ? (
-                <Select
-                  value={queryParams.status}
-                  onValueChange={(v) => updateQueryParams({ status: v })}
-                >
-                  <SelectTrigger className="w-full md:w-[140px] bg-white">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="present">Present</SelectItem>
-                    <SelectItem value="late">Late</SelectItem>
-                    <SelectItem value="absent">Absent</SelectItem>
-                    <SelectItem value="excused">Excused</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="w-full md:w-[140px] h-9 border rounded bg-muted/50" />
-              )}
+              <Select
+                value={queryParams.status}
+                onValueChange={(v) => updateQueryParams({ status: v })}
+                disabled={!isMounted}
+              >
+                <SelectTrigger className="w-full md:w-[140px] bg-white">
+                  <SelectValue placeholder={isMounted ? "Status" : "Loading..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="late">Late</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="excused">Excused</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex-1 md:w-auto">
-              {isMounted ? (
-                <Select
-                  value={queryParams.department}
-                  onValueChange={(v) => updateQueryParams({ department: v })}
-                >
-                  <SelectTrigger className="w-full md:w-40 bg-white">
-                    <SelectValue placeholder="Groups" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="w-full md:w-40 h-9 border rounded bg-muted/50" />
-              )}
+              <Select
+                value={queryParams.department}
+                onValueChange={(v) => updateQueryParams({ department: v })}
+                disabled={!isMounted}
+              >
+                <SelectTrigger className="w-full md:w-40 bg-white">
+                  <SelectValue placeholder={isMounted ? "Groups" : "Loading..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="flex w-full md:w-auto gap-2 shrink-0">
             <Button
               onClick={() => refetch()}
-              title="Refresh"
-              className="shrink-0 bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90"
+              className="shrink-0"
               disabled={isFetching}
             >
               <RotateCcw className={cn("w-4 h-4", isFetching && "animate-spin")} />
@@ -349,15 +278,13 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
 
             <Link href="/attendance/list/import" className="flex-1 md:flex-none">
               <Button variant="outline" className="w-full bg-white whitespace-nowrap">
-                <Download className="mr-2 h-4 w-4" />
-                Import
+                <Download className="mr-2 h-4 w-4" /> Import
               </Button>
             </Link>
 
             <Link href="/attendance/add" className="flex-1 md:flex-none">
-              <Button className="w-full bg-zinc-900 text-zinc-50 hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90 whitespace-nowrap">
-                <Plus className="mr-2 h-4 w-4" />
-                Entry
+              <Button className="w-full whitespace-nowrap">
+                <Plus className="mr-2 h-4 w-4" /> Entry
               </Button>
             </Link>
           </div>
@@ -366,33 +293,16 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
         <AnimatePresence>
           {selectedIds.size > 0 && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2"
             >
               <span className="text-sm font-medium">{selectedIds.size} selected</span>
               <Separator orientation="vertical" className="h-6" />
-              <Button variant="ghost" size="sm" disabled={selectedIds.size !== 1}>
-                <Edit className="mr-2 h-4 w-4" />
-                {selectedIds.size === 1 ? "Edit" : "Bulk Edit"}
+              <Button variant="destructive" size="sm" onClick={() => { setConfirmState({ mode: "bulk" }); setConfirmOpen(true); }}>
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteMultiple}
-                disabled={isSubmitting}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Selected
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedIds(new Set())}
-                className="ml-auto"
-              >
-                Clear Selection
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="ml-auto">
+                Clear
               </Button>
             </motion.div>
           )}
@@ -402,34 +312,33 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
       <div className="mt-4">
         <AttendanceTable
           items={data.items}
-          loading={loading || !isMounted || !orgId}
+          loading={(loading || !isMounted) && !!orgId}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onSelectAll={selectAll}
           userTimezone={userTimezone}
           isMounted={isMounted}
           onEdit={(record) => {
-            setEditTarget(record)
-            setEditIn(record.checkIn ?? "")
-            setEditOut(record.checkOut ?? "")
-            setEditRemarks("")
-            setEditOpen(true)
+            setEditTarget(record); setEditIn(record.checkIn ?? ""); 
+            setEditOut(record.checkOut ?? ""); setEditRemarks(""); setEditOpen(true);
           }}
-          onDelete={(id) => {
-            setConfirmState({ mode: "single", id })
-            setConfirmOpen(true)
-          }}
+          onDelete={(id) => { setConfirmState({ mode: "single", id }); setConfirmOpen(true); }}
         />
 
-        {/* PAGINATION SECTION DIPERBARUI */}
-        {!loading && (
-          <div className="mt-4 border-t pt-4">
+        {!orgId && isMounted && (
+          <div className="text-center py-20 text-muted-foreground border-2 border-dashed rounded-xl bg-muted/20">
+            <Users className="w-10 h-10 mx-auto mb-3 opacity-20" />
+            <p>Please select an organization to view records.</p>
+          </div>
+        )}
+
+        {isMounted && orgId && !loading && (
+          <div className="mt-4">
             <PaginationFooter
               page={queryParams.page}
               totalPages={Math.ceil(data.total / queryParams.limit) || 1}
-              onPageChange={(p) => updateQueryParams({ page: p })} // Tidak perlu manual Math.max lagi
+              onPageChange={(p) => updateQueryParams({ page: p })}
               isLoading={isFetching}
-              // Agar tidak tampil "Showing 1-0 of 0" jika data kosong
               from={data.total === 0 ? 0 : (queryParams.page - 1) * queryParams.limit + 1}
               to={Math.min(queryParams.page * queryParams.limit, data.total)}
               total={data.total}
@@ -444,91 +353,55 @@ const updateQueryParams = useCallback((updates: Partial<QueryParams>) => {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={confirmState?.mode === "bulk" ? "Delete selected records" : "Delete attendance record"}
-        description={
-          confirmState?.mode === "bulk"
-            ? `This will delete ${selectedIds.size} selected record(s). This action cannot be undone.`
-            : "This will delete the selected attendance record. This action cannot be undone."
-        }
+        title="Confirm Deletion"
+        description="This action cannot be undone."
         confirmText="Delete"
         destructive
-        loadingText="Deleting..."
         onConfirm={async () => {
-          if (!confirmState) return
+          if (!confirmState) return;
           try {
-            setIsSubmitting(true)
-            if (confirmState.mode === "bulk") {
-              const ids = Array.from(selectedIds)
-              const res = await deleteMultipleAttendanceRecords(ids)
-              if (res.success) {
-                setSelectedIds(new Set())
-                toast.success("Selected records deleted")
-                queryClient.invalidateQueries({ queryKey: ['attendance'] })
-              } else {
-                toast.error(res.message || "Failed to delete records")
-              }
-            } else if (confirmState.mode === "single" && confirmState.id) {
-              const res = await deleteAttendanceRecord(confirmState.id)
-              if (res?.success) {
-                toast.success("Record deleted")
-                queryClient.invalidateQueries({ queryKey: ['attendance'] })
-              } else {
-                toast.error(res.message || "Failed to delete record")
-              }
+            setIsSubmitting(true);
+            // FIX ERROR ID UNDEFINED: Gunakan assertion atau guard
+            const ids = confirmState.mode === "bulk" ? Array.from(selectedIds) : [confirmState.id!];
+            
+            if (ids.length === 0) return;
+
+            const res = await (confirmState.mode === "bulk" 
+              ? deleteMultipleAttendanceRecords(ids) 
+              : deleteAttendanceRecord(ids[0]!)); // Gunakan ! karena kita yakin ada data dari guard di atas
+
+            if (res?.success) {
+              if (confirmState.mode === "bulk") setSelectedIds(new Set());
+              toast.success("Deleted successfully");
+              queryClient.invalidateQueries({ queryKey: ['attendance'] });
             }
-          } catch (e) {
-            toast.error("Delete operation failed")
-          } finally {
-            setIsSubmitting(false)
-            setConfirmState(null)
-          }
+          } finally { setIsSubmitting(false); setConfirmState(null); }
         }}
       />
 
       <Dialog open={editOpen} onOpenChange={(open) => !isSubmitting && setEditOpen(open)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit attendance record</DialogTitle>
-            <DialogDescription>
-              Perbarui waktu Check In/Out dan catatan. Biarkan kosong untuk menghapus nilai.
-            </DialogDescription>
+            <DialogTitle>Edit Record</DialogTitle>
+            <DialogDescription>Update the check-in/out times for this entry.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <label className="text-sm font-medium">Check In (ISO)</label>
-              <Input
-                value={editIn}
-                onChange={(e) => setEditIn(e.target.value)}
-                placeholder="2026-01-15T08:30:00+07:00"
-                disabled={isSubmitting}
-              />
+              <Input value={editIn} onChange={(e) => setEditIn(e.target.value)} disabled={isSubmitting} />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Check Out (ISO)</label>
-              <Input
-                value={editOut}
-                onChange={(e) => setEditOut(e.target.value)}
-                placeholder="2026-01-15T17:00:00+07:00"
-                disabled={isSubmitting}
-              />
+              <Input value={editOut} onChange={(e) => setEditOut(e.target.value)} disabled={isSubmitting} />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Remarks</label>
-              <Input
-                value={editRemarks}
-                onChange={(e) => setEditRemarks(e.target.value)}
-                placeholder="Catatan..."
-                disabled={isSubmitting}
-              />
+              <Input value={editRemarks} onChange={(e) => setEditRemarks(e.target.value)} disabled={isSubmitting} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button onClick={submitEdit} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button onClick={submitEdit} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -96,7 +96,7 @@ const PaginationEllipsis = ({ className, ...props }: React.ComponentProps<"span"
     aria-hidden
     className={cn(
       "flex h-9 w-9 items-center justify-center rounded-md",
-      "border border-border bg-background text-muted-foreground",
+      "bg-background text-muted-foreground",
       className
     )}
     {...props}
@@ -165,10 +165,8 @@ export function PaginationFooter({
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50],
 }: PaginationFooterProps) {
-  // SAFETY PATCH: Jaga jika totalPages bernilai 0 atau negatif
   const safeTotalPages = Math.max(1, totalPages || 1);
   
-  // SAFETY PATCH: Paksa 'page' menjadi tipe Number yang valid, hindari string atau NaN
   const safePage = Number(page) || 1; 
   
   const pages = getPageNumbers(safePage, safeTotalPages);

@@ -278,7 +278,7 @@ export function AttendanceTable({
             <th className="p-3 text-center text-xs font-semibold uppercase tracking-wider w-24">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border">
+        <tbody className="divide-y">
           {items.length === 0 ? (
             <tr>
               <td colSpan={10} className="text-center py-12 text-muted-foreground text-sm italic">
