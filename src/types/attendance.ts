@@ -84,6 +84,48 @@ export interface BatchEntry {
   breakEndTime?: string
 }
 
+// src/types/attendance.ts
+
+export interface MemberOption {
+  id: string;
+  label: string;
+  department: string;
+}
+
+export interface ScheduleRule {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  core_hours_start: string;
+  core_hours_end: string;
+  break_start?: string | null;
+  break_end?: string | null;
+}
+
+export interface AttendanceRecord {
+  id: number;
+  organization_member_id: number;
+  attendance_date: string;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  actual_break_start: string | null;
+  actual_break_end: string | null;
+  status: string;
+  remarks?: string | null;
+}
+
+export interface AttendanceFormValues {
+  memberId: string;
+  checkInDate: string;
+  checkInTime: string;
+  checkOutDate?: string;
+  checkOutTime?: string;
+  breakStartTime?: string;
+  breakEndTime?: string;
+  status: string;
+  remarks?: string;
+}
+
 export interface BatchAttendanceReturn {
   batchEntries: BatchEntry[]
   setBatchEntries: (entries: BatchEntry[]) => void

@@ -121,12 +121,18 @@ export type PaginationFooterProps = {
   className?: string
 }
 
+// ALGORITMA DIPERBARUI: (< 1 ... 3 ... 7 >) (< 1 2 ... 7 >)(< 1 .. 6 7 >)
 function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
-  const delta = 1
   const range: number[] = []
 
   for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) {
+    if (
+      i === 1 || // Selalu tampilkan halaman 1
+      i === totalPages || // Selalu tampilkan halaman terakhir
+      i === page || // Tampilkan halaman saat ini
+      (page === 1 && i === 2) || // Jika sedang di halaman 1, tampilkan halaman 2
+      (page === totalPages && i === totalPages - 1) // Jika sedang di halaman terakhir, tampilkan halaman sebelumnya
+    ) {
       range.push(i)
     }
   }
@@ -135,12 +141,8 @@ function getPageNumbers(page: number, totalPages: number): (number | "...")[] {
   let prev: number | undefined
 
   for (const i of range) {
-    if (prev !== undefined) {
-      if (i - prev === 2) {
-        rangeWithDots.push(prev + 1)
-      } else if (i - prev !== 1) {
-        rangeWithDots.push("...")
-      }
+    if (prev !== undefined && i - prev > 1) {
+      rangeWithDots.push("...")
     }
     rangeWithDots.push(i)
     prev = i
@@ -215,7 +217,7 @@ export function PaginationFooter({
                 <PaginationLink
                   isActive={page === p}
                   isDisabled={isLoading}
-                  onClick={() => onPageChange(p)}
+                  onClick={() => onPageChange(p as number)}
                 >
                   {p}
                 </PaginationLink>
@@ -234,8 +236,6 @@ export function PaginationFooter({
     </div>
   )
 }
-
-// ─── Named exports untuk penggunaan standalone ────────────────────────────────
 
 export {
   Pagination,
