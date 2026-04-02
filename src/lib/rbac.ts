@@ -67,12 +67,13 @@ export async function getUserOrgRole(userId: string): Promise<{
       .select(`
         id,
         organization_id,
-        role_id,
-        role:system_roles (
-          id,
-          code,
-          name,
-          description
+        organization_member_roles (
+          role:system_roles (
+            id,
+            code,
+            name,
+            description
+          )
         )
       `)
       .eq("user_id", userId)
@@ -83,13 +84,17 @@ export async function getUserOrgRole(userId: string): Promise<{
       return { role: null, organizationId: null, memberId: null };
     }
 
-    const roleData = data.role as IRole | IRole[] | null;
+    // Extract the first role from organization_member_roles array
     let role: IRole | null = null;
-
-    if (Array.isArray(roleData)) {
-      role = roleData[0] || null;
-    } else {
-      role = roleData;
+    const memberRoles = (data as any).organization_member_roles;
+    
+    if (memberRoles && Array.isArray(memberRoles) && memberRoles.length > 0) {
+      const roleData = memberRoles[0].role;
+      if (Array.isArray(roleData)) {
+        role = roleData[0] || null;
+      } else {
+        role = roleData;
+      }
     }
 
     return {
@@ -295,18 +300,30 @@ export async function assignRoleToMember(
 
     const supabase = await createClient();
 
-    // Update member's role
+    // 1. Delete existing roles for this member
+    await supabase
+      .from("organization_member_roles")
+      .delete()
+      .eq("organization_member_id", memberId);
+
+    // 2. Assign the new role
     const { error } = await supabase
-      .from("organization_members")
-      .update({
+      .from("organization_member_roles")
+      .insert({
+        organization_member_id: memberId,
         role_id: roleId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", memberId);
+        assigned_by: assignedBy,
+      });
 
     if (error) {
       return { success: false, message: error.message };
     }
+
+    // 3. Update member's updated_at (optional, but good for consistency)
+    await supabase
+      .from("organization_members")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", memberId);
 
     return { success: true, message: "Role assigned successfully" };
   } catch (error) {

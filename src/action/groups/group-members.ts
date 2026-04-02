@@ -77,11 +77,14 @@ export async function getGroupMembers({
         title,
         code
       ),
-      role:system_roles!role_id (
+      organization_member_roles (
         id,
-        code,
-        name,
-        description
+        role:system_roles (
+          id,
+          code,
+          name,
+          description
+        )
       )
     `
 
@@ -146,6 +149,17 @@ export async function getGroupMembers({
 
     // ── Normalize ────────────────────────────────────────────────────────────
     const items = (data ?? []).map((m: any) => {
+      // Normalize roles from join table
+      if (m.organization_member_roles) {
+        const roles = m.organization_member_roles;
+        if (Array.isArray(roles) && roles.length > 0) {
+          const roleData = roles[0].role;
+          const normalizedRole = Array.isArray(roleData) ? roleData[0] : roleData;
+          m.role = normalizedRole;
+          m.role_id = normalizedRole?.id;
+        }
+      }
+
       // Normalize departments array → object
       if (Array.isArray(m.departments)) {
         m.departments = m.departments.length > 0 ? m.departments[0] : null

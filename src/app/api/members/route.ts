@@ -182,11 +182,14 @@ export async function GET(req: Request) {
           title,
           code
         ),
-        role:role_id (
+        organization_member_roles (
           id,
-          code,
-          name,
-          description
+          role:system_roles (
+            id,
+            code,
+            name,
+            description
+          )
         )
       `)
       .eq('organization_id', organizationId)
@@ -272,8 +275,19 @@ export async function GET(req: Request) {
         });
       }
 
-      // Normalize departments structure (Supabase might return array or object)
+      // Normalize roles and departments structure (Supabase might return array or object)
       raw.forEach((member: any) => {
+        if (member.organization_member_roles) {
+          const roles = member.organization_member_roles;
+          if (Array.isArray(roles) && roles.length > 0) {
+            // Backward compatibility: set singular role and role_id
+            const roleData = roles[0].role;
+            const normalizedRole = Array.isArray(roleData) ? roleData[0] : roleData;
+            member.role = normalizedRole;
+            member.role_id = normalizedRole?.id;
+          }
+        }
+
         if (member.departments) {
           // If departments is an array, take the first element
           if (Array.isArray(member.departments) && member.departments.length > 0) {

@@ -513,7 +513,6 @@ export async function acceptInvitation(data: AcceptInvitationData) {
       .insert({
         organization_id: invitation.organization_id,
         user_id: userId,
-        role_id: invitation.role_id || null,
         department_id: invitation.department_id || null,
         position_id: invitation.position_id || null,
         hire_date: new Date().toISOString().split("T")[0],
@@ -552,6 +551,23 @@ export async function acceptInvitation(data: AcceptInvitationData) {
         }
       }
       return { success: false, message: memberError.message, data: null };
+    }
+
+    // Assign role via organization_member_roles
+    if (invitation.role_id && newOrgMember) {
+      const { error: roleAssignError } = await adminSupabase
+        .from("organization_member_roles")
+        .insert({
+          organization_member_id: newOrgMember.id,
+          role_id: invitation.role_id,
+          assigned_by: invitation.invited_by,
+        });
+
+      if (roleAssignError) {
+        console.error("[Invitation] Role assignment error during acceptance:", roleAssignError);
+        // Note: We don't fail the whole process if role assignment fails, 
+        // as the member record is already created.
+      }
     }
 
     // Update invitation status

@@ -28,7 +28,16 @@ export async function POST(req: NextRequest) {
         // 3. Verify user is a member of the requested organization
         const { data: member } = await supabase
             .from('organization_members')
-            .select('organization_id, role_id')
+            .select(`
+                organization_id,
+                organization_member_roles (
+                    id,
+                    role:system_roles (
+                        id,
+                        code
+                    )
+                )
+            `)
             .eq('user_id', user.id)
             .eq('organization_id', orgId)
             .limit(1)
@@ -42,11 +51,17 @@ export async function POST(req: NextRequest) {
 
         }
 
+        // Normalize role for logging
+        const roles = (member as any).organization_member_roles || []
+        const roleData = roles[0]?.role
+        const role = Array.isArray(roleData) ? roleData[0] : roleData
+
         // Log organization context for debugging multi-tenancy
         console.log('[github-oauth] Organization context:', {
             userId: user.id,
             organizationId: member.organization_id,
-            roleId: member.role_id
+            roleId: role?.id,
+            roleCode: role?.code
         })
 
         // 4. Check if integration already exists

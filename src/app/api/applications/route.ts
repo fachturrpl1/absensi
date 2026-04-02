@@ -22,10 +22,19 @@ export async function GET(req: NextRequest) {
         // Get active organization ID from cookies (middleware typically sets this)
         const orgId = req.cookies.get('org_id')?.value
 
-        // 1. Get user's organization member record
         let query = supabase
             .from('organization_members')
-            .select('organization_id, role_id')
+            .select(`
+                organization_id,
+                organization_member_roles (
+                    id,
+                    role:system_roles (
+                        id,
+                        code,
+                        name
+                    )
+                )
+            `)
             .eq('user_id', user.id)
 
         // Smart Fallback: Use cookie if available, otherwise find best match
@@ -43,18 +52,41 @@ export async function GET(req: NextRequest) {
 
         if (orgId) {
             const result = await query.limit(1).maybeSingle()
-            member = result.data
+            member = result.data as any
             memberError = result.error
+            
+            if (member && member.organization_member_roles) {
+                const roles = member.organization_member_roles as any[]
+                if (roles.length > 0) {
+                    const roleData = roles[0].role
+                    member.role = Array.isArray(roleData) ? roleData[0] : roleData
+                    member.role_id = member.role?.id
+                }
+            }
         } else {
             // If no cookie, fetch all and find the best one (Owner/Admin)
             const { data: members, error } = await query
             if (error) {
                 memberError = error
             } else if (members && members.length > 0) {
-                // Priority: Owner(4) > Admin(3) > First found
-                member = members.find(m => m.role_id === 4) ||
-                    members.find(m => m.role_id === 3) ||
-                    members[0]
+                // Normalize and search
+                const normalizedMembers = members.map((m: any) => {
+                    if (m.organization_member_roles) {
+                        const roles = m.organization_member_roles as any[]
+                        if (roles.length > 0) {
+                            const roleData = roles[0].role
+                            m.role = Array.isArray(roleData) ? roleData[0] : roleData
+                            m.role_id = m.role?.id
+                        }
+                    }
+                    return m
+                })
+
+                // Priority: Owner(code: 'owner') > Admin(code: 'admin') > First found
+                member = normalizedMembers.find(m => m.role?.code === 'owner') ||
+                    normalizedMembers.find(m => m.role?.code === 'admin') ||
+                    normalizedMembers[0]
+                
                 console.log('[applications] Auto-selected best organization:', member?.organization_id)
             }
         }
@@ -81,20 +113,16 @@ export async function GET(req: NextRequest) {
             )
         }
 
-        // 2. Resolve role code manually to avoid join issues
-        const { data: role, error: roleError } = await supabase
-            .from('system_roles')
-            .select('code')
-            .eq('id', member.role_id)
-            .maybeSingle()
-
-        if (roleError || !role) {
-            console.error('[applications] Role fetch error:', roleError)
+        // 2. We already fetched the role in the join query above
+        const role = member.role
+        
+        if (!role) {
+            console.error('[applications] Role not found for member:', member.id)
             return NextResponse.json({ error: "Role not found" }, { status: 403 })
         }
 
         console.log('[applications] Role Permission Check:', {
-            roleId: member.role_id,
+            roleId: (member as any).role_id,
             roleCode: role.code,
             isAuthorized: ['owner', 'admin'].includes(role.code)
         })

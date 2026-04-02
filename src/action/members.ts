@@ -12,11 +12,25 @@ async function getSupabase() {
 // ? Add MemIOrganization_member
 export const createOrganizationMember = async (Organization_member: Partial<IOrganization_member>) => {
   const supabase = await getSupabase();
-  const { data, error } = await supabase.from("organization_members").insert([Organization_member]).select().single();
+  const adminClient = createAdminClient();
+  
+  // Extract role_id if present
+  const { role_id, ...memberData } = Organization_member;
+
+  const { data, error } = await supabase.from("organization_members").insert([memberData]).select().single();
 
   if (error) {
     return { success: false, message: error.message, data: null };
   }
+
+  // If role_id was provided, assign it in the join table
+  if (role_id && data.id) {
+    await adminClient.from("organization_member_roles").insert({
+      organization_member_id: data.id,
+      role_id: role_id
+    });
+  }
+
   return { success: true, message: "Members added successfully", data: data as IOrganization_member };
 };
 export const getAllOrganization_member = async (organizationId?: number) => {
@@ -102,11 +116,14 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         title,
         code
       ),
-      role:system_roles!role_id (
+      organization_member_roles (
         id,
-        code,
-        name,
-        description
+        role:system_roles (
+          id,
+          code,
+          name,
+          description
+        )
       )
     `)
       .eq("organization_id", targetOrgId)
@@ -120,8 +137,19 @@ export const getAllOrganization_member = async (organizationId?: number) => {
     }
 
     if (pageData && pageData.length > 0) {
-      // Normalize departments structure (Supabase might return array or object)
+      // Normalize roles and departments structure
       pageData.forEach((member: any) => {
+        if (member.organization_member_roles) {
+          const roles = member.organization_member_roles;
+          if (Array.isArray(roles) && roles.length > 0) {
+            // Backward compatibility: set singular role and role_id
+            const roleData = roles[0].role;
+            const normalizedRole = Array.isArray(roleData) ? roleData[0] : roleData;
+            member.role = normalizedRole;
+            member.role_id = normalizedRole?.id;
+          }
+        }
+
         if (member.departments) {
           // If departments is an array, take the first element
           if (Array.isArray(member.departments) && member.departments.length > 0) {
@@ -431,10 +459,14 @@ export const getMemberSummary = async (): Promise<OrganizationSummary> => {
 // ?? Update Organization
 export const updateOrganizationMember = async (id: string, organization: Partial<IOrganization_member>) => {
   const supabase = await getSupabase();
+  const adminClient = createAdminClient();
+
+  // Extract role_id if present
+  const { role_id, ...memberData } = organization;
 
   const { data, error } = await supabase
     .from("organization_members")
-    .update(organization)
+    .update(memberData)
     .eq("id", id)
     .select()
     .single();
@@ -442,6 +474,24 @@ export const updateOrganizationMember = async (id: string, organization: Partial
   if (error) {
     return { success: false, message: error.message, data: null };
   }
+
+  // If role_id was provided, update the join table
+  if (role_id) {
+    // 1. Delete existing roles
+    await adminClient
+      .from("organization_member_roles")
+      .delete()
+      .eq("organization_member_id", id);
+      
+    // 2. Insert new role
+    await adminClient
+      .from("organization_member_roles")
+      .insert({
+        organization_member_id: id,
+        role_id: role_id
+      });
+  }
+
   return { success: true, message: "Organization updated successfully", data: data as IOrganization_member };
 };
 export const deleteOrganization_member = async (id: string) => {
@@ -468,11 +518,14 @@ export const getOrganizationMembersById = async (id: string) => {
     .select(`
     *,
     organizations:organization_id (*),
-    role:system_roles!role_id (
+    organization_member_roles (
       id,
-      code,
-      name,
-      description
+      role:system_roles (
+        id,
+        code,
+        name,
+        description
+      )
     )
   `)
     .eq("id", id)
@@ -530,6 +583,16 @@ export const getOrganizationMembersById = async (id: string) => {
           .maybeSingle()
 
         if (!orgError && orgData) member.organization = orgData
+      }
+
+      if (member.organization_member_roles) {
+        const roles = member.organization_member_roles;
+        if (Array.isArray(roles) && roles.length > 0) {
+          const roleData = roles[0].role;
+          const normalizedRole = Array.isArray(roleData) ? roleData[0] : roleData;
+          member.role = normalizedRole;
+          member.role_id = normalizedRole?.id;
+        }
       }
 
       // Fetch RFID Card explicitly to be robust

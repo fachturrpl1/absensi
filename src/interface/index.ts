@@ -407,6 +407,10 @@ export interface IOrganization_member {
     organization?: IOrganization;
     rfid_cards?: IRfidCard;
     role?: IRole;
+    organization_member_roles?: Array<{
+        id: string;
+        system_roles: IRole | IRole[];
+    }>;
 }
 
 // ─── Performance ──────────────────────────────────────────────────────────────
