@@ -1,16 +1,21 @@
-﻿"use client"
+"use client"
 
 import React, { useState, useEffect, use } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import {
   Mail,
-  Clock,
   ChevronDown,
   Info,
-  X
+  X,
+  ExternalLink,
+  Calendar,
+  Globe,
+  Plus,
+  HelpCircle,
+  Search,
 } from "lucide-react"
+import { CountryOption } from "@/types/geo"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/profile&image/user-avatar"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
@@ -32,23 +37,38 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { IOrganization_member, IMemberPerformance, IUser } from "@/interface"
+import { Switch } from "@/components/ui/switch"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import type { IOrganization_member, IUser } from "@/interface"
 import { cn } from "@/lib/utils"
 // Server Actions
 import { getOrganizationMembersById } from "@/action/members"
-import { getMemberPerformance } from "@/action/member_performance"
-import { useMemberRecentAttendance } from "@/hooks/use-member-recent-attendance"
 import { PageSkeleton } from "@/components/ui/loading-skeleton"
-
-// Types
-type WorkSchedule = {
-  name: string
-  type: string
-  workingHours: string
-  workingDays: string[]
-}
+import { toast } from "sonner"
 
 type TabType = "info" | "employment" | "roles" | "pay" | "worktime" | "settings"
+
+interface ICountry {
+  code: string;
+  name: string;
+  phone: string;
+}
 
 // Helper Functions
 const formatDate = (value?: string | null) => {
@@ -62,19 +82,21 @@ const formatDate = (value?: string | null) => {
   }).format(date)
 }
 
-const formatPhoneNumber = (phone?: string | null) => {
-  if (!phone || phone === "-" || phone.trim() === "") return ""
-  return phone
-}
 
 // Sub-Components
-function ContactInfoRow({ icon: Icon, text }: { icon: typeof Mail; text: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+function ContactInfoRow({ icon: Icon, text, href }: { icon: typeof Mail; text: string; href?: string }) {
+  const content = (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground group">
       <Icon className="h-4 w-4" />
-      <span>{text}</span>
+      <span className="group-hover:text-foreground transition-colors">{text}</span>
+      {href && <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />}
     </div>
   )
+
+  if (href) {
+    return <a href={href} target="_blank" rel="noopener noreferrer">{content}</a>
+  }
+  return content
 }
 
 function FormField({
@@ -131,15 +153,12 @@ function MemberProfileHeader({
   userId,
   joinDate,
   email,
-  lastTracked,
 }: {
-  user?: IUser
   displayName: string
   photoUrl?: string
   userId?: string
   joinDate: string
   email: string
-  lastTracked: string
 }) {
   const resolvedPhotoUrl = useProfilePhotoUrl(photoUrl, userId)
 
@@ -185,8 +204,8 @@ function MemberProfileHeader({
 
       {/* Right: Contact Info */}
       <div className="space-y-2">
-        <ContactInfoRow icon={Mail} text={email || "No email"} />
-        <ContactInfoRow icon={Clock} text={`Last tracked time ${lastTracked}`} />
+        <ContactInfoRow icon={Mail} text={email || "No email"} href={email ? `mailto:${email}` : undefined} />
+        <ContactInfoRow icon={Globe} text="(GMT+07:00) Asia/Jakarta" href="#" />
       </div>
     </div>
   )
@@ -202,25 +221,37 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
   const [isSaving, setIsSaving] = useState(false)
   const [member, setMember] = useState<IOrganization_member | null>(null)
-  const [, setPerformance] = useState<IMemberPerformance | undefined>(undefined)
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
+  const [allCountries, setAllCountries] = useState<ICountry[]>([])
+  const [phoneSearch, setPhoneSearch] = useState("")
+
+  // Fetch Countries
+  useEffect(() => {
+    fetch("/api/geo/countries")
+      .then(res => res.json())
+      .then((data: CountryOption[]) => {
+        const mapped = data.map(c => ({
+          code: c.value,
+          name: c.label,
+          phone: c.phone || ""
+        }))
+        setAllCountries(mapped)
+      })
+      .catch(err => console.error("Failed to fetch countries", err))
+  }, [])
 
   // Fetch Data
   useEffect(() => {
-    setMounted(true)
     const fetchData = async () => {
       try {
-        const [memberRes, perfRes] = await Promise.all([
-          getOrganizationMembersById(id),
-          getMemberPerformance(id),
-        ])
+        const memberRes = await getOrganizationMembersById(id)
+        console.log("Member fetch result:", { id, success: memberRes.success, hasData: !!memberRes.data });
 
         if (memberRes && memberRes.success && memberRes.data) {
           setMember(memberRes.data as unknown as IOrganization_member)
-        }
-        if (perfRes && perfRes.success && perfRes.data) {
-          setPerformance(perfRes.data)
+        } else {
+          console.log("Member not found or fetch failed:", memberRes.message);
+          toast.error(`Fetch failed for ID ${id}: ${memberRes.message || 'Unknown error'}`);
         }
       } catch (error) {
         console.error("Failed to fetch member data", error)
@@ -231,8 +262,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
     fetchData()
   }, [id])
 
-  // Get recent attendance data
-  const { data: recentAttendance } = useMemberRecentAttendance(id, 14)
 
   if (loading) {
     return (
@@ -255,8 +284,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
   // Derived State
   const user: IUser | undefined = member.user
   const email = user?.email || ""
-  const phone = user?.phone || ""
-
 
   const displayName = user
     ? [user.first_name, user.last_name]
@@ -267,21 +294,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
     : "Name unavailable"
 
   const joinDate = formatDate(member.hire_date)
-  const homeAddress = user
-    ? [user.jalan, user.kelurahan, user.kecamatan].filter(Boolean).join(", ")
-    : ""
 
-  // Fix: Cast to prevent narrowing to "never" since it's constantly undefined currently
-  const schedule = undefined as WorkSchedule | undefined
-
-  const lastTracked = mounted && recentAttendance && recentAttendance.length > 0
-    ? formatDate(recentAttendance?.[0]?.date)
-    : "No recent activity"
-
-  const rfidCards = member.rfid_cards
-  const cardNumber = Array.isArray(rfidCards)
-    ? (rfidCards[0]?.card_member || rfidCards[0]?.card_number)
-    : ((rfidCards as any)?.card_member || (rfidCards as any)?.card_number)
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -307,9 +320,9 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
             <div className="flex items-center gap-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" className="h-10 px-4 rounded-md border-slate-200">
                     Actions
-                    <ChevronDown className="ml-2 h-4 w-4" />
+                    <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -326,8 +339,8 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button onClick={handleSave} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save"}
+              <Button className="bg-black hover:bg-zinc-800 text-white h-10 px-6 rounded-md transition-colors shadow-sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>
@@ -369,301 +382,832 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           userId={user?.id}
           joinDate={joinDate}
           email={email}
-          lastTracked={lastTracked}
         />
 
+        {/* INFO TAB */}
         {activeTab === "info" && (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold">Identity</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="EMPLOYEE ID"
-                  value={user?.nik || member.employee_id || user?.employee_code || ""}
-                  placeholder="No employee ID"
-                />
+          <div className="space-y-12 animate-in fade-in duration-500">
+            {/* Identity Section */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-medium text-slate-800">Identity</h2>
+              </div>
 
-                <FormField
-                  label="BIRTHDAY"
-                  value={user?.date_of_birth ?? ""}
-                  placeholder="YYYY-MM-DD"
-                  type="date"
-                />
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField label="EMPLOYEE ID" placeholder="No employee ID" />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">IP ADDRESS</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>The IP address of the member.</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input defaultValue="2404:c0:9c2e:e57d:e1e1:827d:5493:ce8f" disabled className="bg-slate-50 border-slate-200 text-slate-500" />
+                </div>
+              </div>
 
-                <FormField
-                  label="CARD NUMBER"
-                  value={cardNumber}
-                  placeholder="No card assigned"
-                  disabled={true}
-                />
+              <div className="grid gap-6 md:grid-cols-2 mt-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">BIRTHDAY</Label>
+                  <div className="flex gap-3">
+                    <Select>
+                      <SelectTrigger className="w-full h-11 border-slate-200">
+                        <SelectValue placeholder="Select a month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">January</SelectItem>
+                        <SelectItem value="2">February</SelectItem>
+                        {/* ... other months */}
+                      </SelectContent>
+                    </Select>
+                    <Select>
+                      <SelectTrigger className="w-full h-11 border-slate-200">
+                        <SelectValue placeholder="Select a day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <SelectItem key={i + 1} value={(i + 1).toString()}>{i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select>
+                      <SelectTrigger className="w-full h-11 border-slate-200">
+                        <SelectValue placeholder="Select a year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 100 }, (_, i) => (
+                          <SelectItem key={2026 - i} value={(2026 - i).toString()}>{2026 - i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">DATE</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>The current date for reference.</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input defaultValue="Wed, Apr 1, 2026" disabled className="bg-slate-50 border-slate-200 text-slate-500" />
+                </div>
+              </div>
+
+              {/* Hubstaff People BETA Banner */}
+              <div className="relative p-6 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden mt-8">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-50">
+                    <div className="flex items-center scale-75 origin-left">
+                      <span className="font-bold italic tracking-tighter text-black">7</span>
+                      <span className="font-bold tracking-tighter italic text-black">Hubstaff</span>
+                      <span className="ml-1 font-bold text-slate-800">People</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-800">Hubstaff People</p>
+                      <Badge className="bg-slate-100 text-slate-600 border-none text-[8px] font-bold h-4">BETA</Badge>
+                    </div>
+                    <p className="text-xs text-slate-600">Try these new features for free while Hubstaff People is in BETA</p>
+                    <ul className="text-xs text-slate-500 list-disc list-inside space-y-1 pt-2">
+                      <li>View IP addresses</li>
+                      <li>Create and manage custom fields</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold">Contact</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="HOME ADDRESS"
-                  value={homeAddress}
-                  placeholder="Search for an address"
-                />
-                <FormField
-                  label="PERSONAL EMAIL"
-                  value={email}
-                  placeholder="name@example.com"
-                  type="email"
-                />
-                <FormField
-                  label="PERSONAL PHONE"
-                  value={formatPhoneNumber(phone)}
-                  type="phone"
-                />
+            {/* Contact Section */}
+            <div className="space-y-6 pt-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-medium text-slate-800">Contact</h2>
+                <button className="text-sm text-primary font-medium hover:underline">Edit work address</button>
               </div>
-            </div>
 
-            {schedule && (
-              <div className="space-y-4">
-                <h2 className="text-sm font-bold">Work Schedule</h2>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{schedule.name}</p>
-                          <p className="text-xs text-muted-foreground">{schedule.type}</p>
-                        </div>
+              <div className="grid gap-12 md:grid-cols-2">
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK ADDRESS</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <Input placeholder="No address" className="h-11 border-slate-200 bg-slate-50" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK EMAIL</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <Input defaultValue={email} className="h-11 border-slate-200 bg-slate-50 text-slate-500" disabled />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK PHONE</Label>
+                    <div className="flex items-center gap-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div className="flex items-center gap-2 h-11 px-3 border border-slate-200 rounded-md bg-white hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]">
+                            <img
+                              src={`https://flagcdn.com/w20/${(allCountries.find(c => `+${c.phone}` === "+1")?.code || "us").toLowerCase()}.png`}
+                              alt="Flag"
+                              className="h-3 w-5 object-cover"
+                            />
+                            <ChevronDown className="h-3 w-3 text-slate-400" />
+                            <span className="text-sm">+1</span>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[280px] p-0 shadow-xl border-slate-200">
+                          <div className="p-2 border-b bg-slate-50/50 sticky top-0 z-10">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                              <Input
+                                placeholder="Search country or code..."
+                                className="pl-9 h-9 text-xs border-slate-200 focus-visible:ring-slate-200"
+                                value={phoneSearch}
+                                onChange={(e) => setPhoneSearch(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-[300px] overflow-y-auto py-1 custom-scrollbar">
+                            {allCountries
+                              .filter(c =>
+                                c.name.toLowerCase().includes(phoneSearch.toLowerCase()) ||
+                                c.phone.includes(phoneSearch)
+                              )
+                              .map((c) => (
+                                <DropdownMenuItem
+                                  key={c.code}
+                                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 focus:bg-slate-50"
+                                >
+                                  <img src={`https://flagcdn.com/w20/${c.code.toLowerCase()}.png`} alt={c.name} className="h-3 w-5" />
+                                  <span className="flex-1 text-sm text-slate-700">{c.name}</span>
+                                  <span className="text-xs text-slate-400 font-medium">+{c.phone}</span>
+                                </DropdownMenuItem>
+                              ))}
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Input placeholder="201-555-0123" className="h-11 border-slate-200" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">HOME ADDRESS</Label>
+                        <Info className="h-3 w-3 text-muted-foreground" />
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Working Hours</p>
-                          <p className="text-sm font-medium">{schedule.workingHours}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Working Days</p>
-                          <p className="text-sm font-medium">{schedule.workingDays.join(", ")}</p>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border rounded border-slate-200"></div>
+                        <span className="text-xs text-slate-400">Mailing address</span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                    <Input placeholder="Search for an address" className="h-11 border-slate-200" />
+                  </div>
+
+                  <FormField label="PERSONAL EMAIL" placeholder="name@example.com" />
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PERSONAL PHONE</Label>
+                    <div className="flex items-center gap-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div className="flex items-center gap-2 h-11 px-3 border border-slate-200 rounded-md bg-white hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]">
+                            <img
+                              src={`https://flagcdn.com/w20/${(allCountries.find(c => `+${c.phone}` === "+1")?.code || "us").toLowerCase()}.png`}
+                              alt="Flag"
+                              className="h-3 w-5 object-cover"
+                            />
+                            <ChevronDown className="h-3 w-3 text-slate-400" />
+                            <span className="text-sm">+1</span>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-[280px] p-0 shadow-xl border-slate-200">
+                          <div className="p-2 border-b bg-slate-50/50 sticky top-0 z-10">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                              <Input
+                                placeholder="Search country or code..."
+                                className="pl-9 h-9 text-xs border-slate-200 focus-visible:ring-slate-200"
+                                value={phoneSearch}
+                                onChange={(e) => setPhoneSearch(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-[300px] overflow-y-auto py-1 custom-scrollbar">
+                            {allCountries
+                              .filter(c =>
+                                c.name.toLowerCase().includes(phoneSearch.toLowerCase()) ||
+                                c.phone.includes(phoneSearch)
+                              )
+                              .map((c) => (
+                                <DropdownMenuItem
+                                  key={c.code}
+                                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 focus:bg-slate-50"
+                                >
+                                  <img src={`https://flagcdn.com/w20/${c.code.toLowerCase()}.png`} alt={c.name} className="h-3 w-5" />
+                                  <span className="flex-1 text-sm text-slate-700">{c.name}</span>
+                                  <span className="text-xs text-slate-400 font-medium">+{c.phone}</span>
+                                </DropdownMenuItem>
+                              ))}
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Input placeholder="201-555-0123" className="h-11 border-slate-200" />
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
+
+              <div className="pt-10 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium text-slate-700">Custom fields</span>
+                  <Info className="h-3 w-3 text-slate-400" />
+                </div>
+                <button className="text-sm text-primary font-medium hover:underline">Manage custom fields</button>
+              </div>
+            </div>
           </div>
         )}
 
+        {/* EMPLOYMENT TAB */}
         {activeTab === "employment" && (
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold">Employment Timeline</h2>
-              <Card>
-                <CardContent className="p-0">
-                  <div className="grid divide-y md:grid-cols-3 md:divide-x md:divide-y-0">
-                    <div className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Start Date</p>
-                      <p className="mt-1 font-medium">{formatDate(member.hire_date)}</p>
+          <div className="space-y-12 animate-in fade-in duration-500">
+            {/* Job details */}
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium text-slate-800">Job details</h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
+                  <FormField label="JOB TITLE" placeholder="Select the job title" linkText="" />
+                  <FormField label="JOB TYPE" placeholder="Select the job type" linkText="" />
+                </div>
+                <div className="space-y-6">
+                  <FormField label="DEPARTMENT" placeholder="Select the department" linkText="" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK ADDRESS</Label>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border rounded border-slate-200"></div>
+                        <span className="text-xs text-slate-400">Mailing address</span>
+                      </div>
                     </div>
-                    <div className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Probation End</p>
-                      <p className="mt-1 font-medium">{formatDate(member.probation_end_date)}</p>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Duration</p>
-                      <p className="mt-1 font-medium">
-                        {(() => {
-                          if (!member.hire_date) return "-"
-                          const start = new Date(member.hire_date)
-                          const end = member.termination_date ? new Date(member.termination_date) : new Date()
-                          if (Number.isNaN(start.getTime())) return "-"
-
-                          const diffTime = Math.abs(end.getTime() - start.getTime())
-                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-                          if (diffDays < 30) return `${diffDays} days`
-                          const months = Math.floor(diffDays / 30)
-                          if (months < 12) return `${months} months`
-                          const years = Math.floor(months / 12)
-                          const remainingMonths = months % 12
-                          return `${years} year${years > 1 ? "s" : ""}${remainingMonths > 0 ? `, ${remainingMonths} month${remainingMonths > 1 ? "s" : ""}` : ""}`
-                        })()}
-                      </p>
-                    </div>
+                    <Input placeholder="Search for an address" className="h-11 border-slate-200" />
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-4">
-              <h2 className="text-sm font-bold">Employment Details</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="JOB TITLE"
-                  value={member.positions?.title || "No title assigned"}
-                  disabled={true}
-                />
-                <FormField
-                  label="DEPARTMENT"
-                  value={
-                    (member.departments as any)?.name || (member.groups as any)?.name || "No department"
-                  }
-                  disabled={true}
-                />
-                <FormField
-                  label="MANAGER"
-                  value="Not assigned"
-                  disabled={true}
-                />
-                <FormField
-                  label="EMPLOYMENT TYPE"
-                  value={member.contract_type || "Not specified"}
-                  disabled={true}
-                />
-                <FormField
-                  label="EMPLOYMENT STATUS"
-                  value={member.employment_status || (member.is_active ? "Active" : "Inactive")}
-                  disabled={true}
-                />
-                <FormField
-                  label="WORK LOCATION"
-                  value={member.work_location || "Not specified"}
-                  disabled={true}
-                />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold">Accounting</h2>
-                <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">View Only</span>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <FormField
-                  label="TAX INFO"
-                  value={member.tax_id_number || "Not set"}
-                  disabled={true}
-                />
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      TAX TYPE
-                    </Label>
+            {/* Hiring details */}
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium text-slate-800">Hiring details</h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
+                  <FormField label="EMPLOYMENT TYPE" placeholder="Select the employment type" linkText="" />
+                  <FormField label="IN-OFFICE / REMOTE" placeholder="Select the workplace model" linkText="" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField label="% IN-OFFICE" placeholder="In-office percentage" />
+                    <FormField label="% REMOTE" placeholder="Remote percentage" />
                   </div>
-                  <Select disabled defaultValue={member.tax_type || "employee"}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="contractor">Contractor</SelectItem>
-                    </SelectContent>
-                  </Select>
+                </div>
+                <div className="space-y-6">
+                  <FormField label="EMPLOYED THROUGH" placeholder="Select the hiring arrangement" linkText="" />
+                </div>
+              </div>
+            </div>
+
+            {/* Accounting */}
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium text-slate-800">Accounting</h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
+                  <FormField label="TAX INFO" placeholder="No tax info" />
+                  <FormField label="TAX TYPE" placeholder="Select the tax type" />
+                </div>
+                <div className="space-y-6">
+                  <FormField label="ACCOUNT CODE" placeholder="No account code" />
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">CURRENCY</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <Input placeholder="Currency" disabled className="h-11 border-slate-200 bg-slate-50" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium text-slate-800">Timeline</h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">START DATE</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <div className="relative">
+                      <Input className="h-11 border-slate-200" defaultValue="Wed, Apr 1, 2026" />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">END DATE</Label>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <button className="text-xs text-primary font-medium hover:underline">Begin offboarding</button>
+                    </div>
+                    <div className="relative">
+                      <Input className="h-11 border-slate-200 bg-slate-50" disabled />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-300" />
+                    </div>
+                  </div>
+
+                  <FormField label="TERMINATION REASON" placeholder="Select the termination reason" />
                 </div>
 
-                <FormField
-                  label="ACCOUNT CODE"
-                  value={member.account_code || "Not set"}
-                  disabled={true}
-                />
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      CURRENCY
-                    </Label>
-                  </div>
-                  <Select disabled defaultValue={member.currency || "IDR"}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IDR">IDR - Indonesian Rupiah</SelectItem>
-                      <SelectItem value="USD">USD - US Dollar</SelectItem>
-                      <SelectItem value="EUR">EUR - Euro</SelectItem>
-                      <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-2 h-full">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">EMPLOYMENT COMMENTS</Label>
+                  <textarea className="w-full h-[calc(100%-28px)] min-h-[150px] p-4 border border-slate-200 rounded-md resize-none focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all"></textarea>
                 </div>
               </div>
             </div>
           </div>
         )}
 
+        {/* ROLES TAB */}
         {activeTab === "roles" && (
-          <div className="space-y-6">
-            {/* Role Selection */}
-            <div className="space-y-4">
+          <div className="space-y-12 animate-in fade-in duration-500">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  ROLE <span className="text-red-500">*</span>
-                </Label>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ROLE *</Label>
                 <button className="text-xs text-primary hover:underline">Learn more</button>
               </div>
-              <Select defaultValue={member.role?.name || "Member"}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a role" />
+              <Select defaultValue="owner">
+                <SelectTrigger className="w-full h-12 border-slate-200 bg-white">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Owner">Owner</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Member">Member</SelectItem>
-                  <SelectItem value="Project Viewer">Project Viewer</SelectItem>
+                  <SelectItem value="owner">Organization owner</SelectItem>
+                  <SelectItem value="manager">Organization manager</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Projects & Teams */}
-            <div className="grid gap-8 md:grid-cols-2">
-              {/* Projects Column */}
+            <div className="grid gap-12 md:grid-cols-2">
               <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold">Projects</h3>
-                  <Info className="h-3 w-3 text-muted-foreground" />
-                </div>
-
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">Able to track time on these projects</Label>
-                    <button className="text-xs text-primary hover:underline">Select all</button>
-                  </div>
-                  <div className="relative">
-                    <div className="flex min-h-[40px] w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                      <span className="text-muted-foreground">0 projects</span>
-                      <X className="h-4 w-4 cursor-pointer text-muted-foreground hover:text-foreground" />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Projects</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
                     </div>
-                    <div className="absolute left-0 top-0 h-full w-1 rounded-l-md bg-blue-500"></div>
+                    <button className="text-xs text-primary font-medium hover:underline">Select all</button>
                   </div>
+                  <p className="text-xs text-slate-500 mb-2">Able to track time on these projects</p>
+                  <Select>
+                    <SelectTrigger className="h-12 border-slate-200 bg-white">
+                      <SelectValue placeholder="Select projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="p1">Project 1</SelectItem>
+                      <SelectItem value="p2">Project 2</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400 font-medium pt-2">
+                    Organization owner and organization managers can view and edit all projects by default
+                  </p>
                 </div>
               </div>
 
-              {/* Teams Column */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold">Teams</h3>
-                  <Info className="h-3 w-3 text-muted-foreground" />
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Teams</Label>
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                    <button className="text-xs text-primary font-medium hover:underline">Select all</button>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-2">Member in these teams</p>
+                  <Select>
+                    <SelectTrigger className="h-12 border-slate-200 bg-white">
+                      <SelectValue placeholder="Select teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="t1">Team Alpha</SelectItem>
+                      <SelectItem value="t2">Team Beta</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">Member in these teams</Label>
-                    <button className="text-xs text-primary hover:underline">Select all</button>
+                    <p className="text-xs text-slate-500">Manages these teams as <span className="font-bold text-slate-800">Team lead</span></p>
+                    <button className="text-xs text-primary font-medium hover:underline">Select all</button>
                   </div>
-                  <Input placeholder="Select teams" />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">Manages these teams as <span className="font-semibold text-foreground">Team lead</span></Label>
-                    <button className="text-xs text-primary hover:underline">Select all</button>
-                  </div>
-                  <Input placeholder="Select teams" />
+                  <Select>
+                    <SelectTrigger className="h-12 border-slate-200 bg-white">
+                      <SelectValue placeholder="Select teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="t1">Team Alpha</SelectItem>
+                      <SelectItem value="t2">Team Beta</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Other tabs placeholder */}
-        {activeTab !== "info" && activeTab !== "employment" && activeTab !== "roles" && (
+        {/* PAY / BILL TAB */}
+        {activeTab === "pay" && (
+          <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Payment Integration Banner */}
+            <div className="relative flex items-center justify-between p-6 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden group">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center justify-center p-3">
+                  <div className="flex items-center">
+                    <span className="text-2xl font-bold italic tracking-tighter">7</span>
+                    <span className="text-2xl font-bold tracking-tighter text-black italic">Wise</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Pay your team through Wise with our automated payroll system</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <button className="text-sm text-slate-600 font-medium hover:underline">Learn More</button>
+                <Button variant="default" className="bg-black hover:bg-zinc-800 text-white rounded-md px-6">Try out</Button>
+              </div>
+              <button className="absolute top-2 right-2 text-slate-300 hover:text-slate-500">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payment Rates</Label>
+                <HelpCircle className="h-3 w-3 text-muted-foreground" />
+              </div>
+
+              <ToggleGroup type="single" defaultValue="pay" className="justify-start bg-slate-100 p-1 rounded-full w-fit">
+                <ToggleGroupItem value="pay" className="rounded-full px-6 py-2 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">Pay rate</ToggleGroupItem>
+                <ToggleGroupItem value="bill" className="rounded-full px-6 py-2 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">Bill rate</ToggleGroupItem>
+              </ToggleGroup>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pay Period</Label>
+                  <Select defaultValue="none">
+                    <SelectTrigger className="w-full h-11 border-slate-200">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 py-2">
+                <Switch id="require-approval" />
+                <Label htmlFor="require-approval" className="text-sm font-medium text-slate-500">Require timesheet approval</Label>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-4 items-end">
+                <div className="md:col-span-1 space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pay Rate</Label>
+                  <div className="flex">
+                    <div className="flex items-center justify-center px-4 border border-r-0 rounded-l-md bg-slate-50 text-slate-400 text-sm border-slate-200">USD</div>
+                    <Input className="rounded-l-none h-11 border-slate-200" placeholder="0.00" />
+                  </div>
+                </div>
+                <div className="md:col-span-1 space-y-2">
+                  <Select defaultValue="hourly">
+                    <SelectTrigger className="h-11 border-slate-200">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hourly">Hourly</SelectItem>
+                      <SelectItem value="fixed">Fixed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-1 space-y-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Effective Date</Label>
+                  <div className="relative">
+                    <Input className="h-11 pl-10 border-slate-200" defaultValue="Wed, Apr 1, 2026" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <button className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400">
+                      <Calendar className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button className="flex items-center gap-2 text-sm text-slate-600 hover:underline">
+                <Plus className="h-4 w-4" />
+                Add note
+              </button>
+
+              <div className="pt-8 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-normal text-slate-800">Pay rate history</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-[10px] bg-slate-50 text-slate-500 px-2 py-0.5 rounded font-bold">
+                      <div className="flex items-center scale-75">
+                        <span className="font-bold italic tracking-tighter">7</span>
+                        <span className="font-bold tracking-tighter italic">Hubstaff</span>
+                      </div>
+                      PEOPLE
+                    </div>
+                    <Badge className="bg-slate-100 text-slate-600 border-none text-[9px] font-bold py-0 h-4">BETA</Badge>
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b-0 hover:bg-transparent">
+                      <TableHead className="text-[10px] font-bold uppercase tracking-widest px-0">Status</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase tracking-widest">-</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase tracking-widest">Rate</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase tracking-widest">Type</TableHead>
+                      <TableHead className="text-[10px] font-bold uppercase tracking-widest">Effective Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="border-transparent group">
+                      <TableCell className="px-0 py-6 text-sm">Current</TableCell>
+                      <TableCell className="py-6 text-sm text-slate-400">-</TableCell>
+                      <TableCell className="py-6 text-sm">$0.00</TableCell>
+                      <TableCell className="py-6 text-sm">Hourly</TableCell>
+                      <TableCell className="py-6 text-sm">Wed, Apr 1, 2026</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* WORK TIME & LIMITS TAB */}
+        {activeTab === "worktime" && (
+          <div className="space-y-10 animate-in fade-in duration-500">
+            <div className="flex items-center gap-3">
+              <Switch id="use-shifts" />
+              <Label htmlFor="use-shifts" className="text-sm font-medium">Use shifts to set work allowance limits</Label>
+            </div>
+
+            <div className="grid gap-12 md:grid-cols-2">
+              <div className="space-y-10">
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Weekly Work Days</Label>
+                  <p className="text-sm text-slate-500 leading-relaxed">
+                    Set the week days members are expected to work. You can also set which days members are not allowed to track time.
+                  </p>
+                  <div className="space-y-4">
+                    <p className="text-sm">Expected work days: <span className="font-medium text-slate-900">Mon - Fri</span></p>
+                    <div className="flex gap-4">
+                      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                        const isWeekend = day === "Sat" || day === "Sun"
+                        return (
+                          <div key={day} className="flex flex-col items-center gap-2">
+                            <button
+                              className={cn(
+                                "h-11 w-11 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                                isWeekend
+                                  ? "bg-white border border-slate-200 text-slate-400 hover:border-slate-400"
+                                  : "bg-blue-500 text-white shadow-md active:scale-95"
+                              )}
+                            >
+                              {day}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 pt-4">
+                  <Switch id="disable-specific-days" />
+                  <Label htmlFor="disable-specific-days" className="text-sm font-medium">Disable time tracking on specific days</Label>
+                </div>
+              </div>
+
+              <div className="space-y-10">
+                {/* Expected Weekly Hours */}
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expected weekly work hours</Label>
+                  <p className="text-xs text-slate-500">Set the hours members are expected to work weekly</p>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1 flex">
+                      <Input className="rounded-r-none h-11 border-r-0 border-slate-200" defaultValue="40" />
+                      <div className="flex items-center justify-center px-4 border rounded-r-md bg-slate-50 text-slate-500 text-sm whitespace-nowrap border-slate-200">hrs/wk</div>
+                    </div>
+                  </div>
+                  <button className="text-xs text-blue-500 hover:underline">Remove</button>
+                </div>
+
+                {/* Weekly Limit */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Weekly limit</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-slate-500">Set the hours members are allowed to work weekly</p>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1 flex">
+                      <Input className="rounded-r-none h-11 border-r-0 border-slate-200" defaultValue="40" />
+                      <div className="flex items-center justify-center px-4 border rounded-r-md bg-slate-50 text-slate-500 text-sm whitespace-nowrap border-slate-200">hrs/wk</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-tight font-medium">40:00 hours per week</p>
+                    <button className="text-[10px] text-blue-500 hover:underline">Remove</button>
+                  </div>
+                  <div className="pt-2 space-y-3">
+                    <div className="flex justify-between items-end">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">This week</p>
+                      <button className="text-[10px] text-blue-500 hover:underline">Edit limit</button>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      <div className="text-[11px] font-medium min-w-[70px] text-slate-600">0:00 / 40:00</div>
+                      <Progress value={0} className="h-2 bg-slate-100" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Limit */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Daily limit</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-slate-500">Set the hours members are allowed to work daily</p>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1 flex">
+                      <Input className="rounded-r-none h-11 border-r-0 border-slate-200" defaultValue="8" />
+                      <div className="flex items-center justify-center px-4 border rounded-r-md bg-slate-50 text-slate-500 text-sm whitespace-nowrap border-slate-200">hrs/day</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-tight font-medium">8:00 hours per day</p>
+                    <button className="text-[10px] text-blue-500 hover:underline">Remove</button>
+                  </div>
+                  <div className="pt-2 space-y-3">
+                    <div className="flex justify-between items-end">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Today</p>
+                      <button className="text-[10px] text-blue-500 hover:underline">Edit limit</button>
+                    </div>
+                    <div className="flex gap-3 items-center">
+                      <div className="text-[11px] font-medium min-w-[70px] text-slate-600">0:00 / 8:00</div>
+                      <Progress value={0} className="h-2 bg-slate-100" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SETTINGS TAB */}
+        {activeTab === "settings" && (
+          <div className="space-y-12 animate-in fade-in duration-500 max-w-3xl">
+            {/* Time Tracking Settings Section */}
+            <div className="space-y-8">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-medium text-slate-800">Time tracking settings</h2>
+              </div>
+
+              <div className="space-y-10">
+                {/* Tracking Permissions */}
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tracking Permissions</Label>
+                  <div className="flex items-center gap-3">
+                    <Switch id="tracking-permission" defaultChecked className="data-[state=checked]:bg-black" />
+                    <Label htmlFor="tracking-permission" className="text-sm font-medium text-slate-700">Able to track time</Label>
+                  </div>
+                </div>
+
+                {/* Keep Idle Time */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Keep Idle Time</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <ToggleGroup type="single" defaultValue="prompt" className="justify-start border border-slate-200 rounded-md overflow-hidden bg-white w-fit">
+                    <ToggleGroupItem value="prompt" className="px-8 border-r border-slate-200 rounded-none data-[state=on]:bg-slate-50 transition-all font-medium py-2 text-sm">Prompt</ToggleGroupItem>
+                    <ToggleGroupItem value="always" className="px-8 border-r border-slate-200 rounded-none data-[state=on]:bg-slate-50 transition-all font-medium py-2 text-sm">Always</ToggleGroupItem>
+                    <ToggleGroupItem value="never" className="px-8 rounded-none data-[state=on]:bg-slate-50 transition-all font-medium py-2 text-sm">Never</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+
+                {/* Idle Timeout */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Idle Timeout</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <div className="w-[300px]">
+                    <Select defaultValue="20">
+                      <SelectTrigger className="h-12 bg-white border-slate-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5 mins</SelectItem>
+                        <SelectItem value="10">10 mins</SelectItem>
+                        <SelectItem value="20">20 mins</SelectItem>
+                        <SelectItem value="30">30 mins</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Modify Time */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Modify time (manual time)</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center gap-12">
+                    <ToggleGroup type="single" defaultValue="add-edit" className="justify-start border border-slate-200 rounded-full overflow-hidden bg-white w-fit p-0.5">
+                      <ToggleGroupItem value="add-edit" className="rounded-full px-6 py-2 data-[state=on]:bg-slate-50 transition-all font-medium text-sm">Add & Edit</ToggleGroupItem>
+                      <ToggleGroupItem value="off" className="rounded-full px-6 py-2 data-[state=on]:bg-slate-50 transition-all font-medium text-sm">Off</ToggleGroupItem>
+                    </ToggleGroup>
+                    <div className="flex items-center gap-3">
+                      <Switch id="require-approval-settings" className="data-[state=checked]:bg-black opacity-40" disabled />
+                      <Label htmlFor="require-approval-settings" className="flex items-center gap-2 text-sm font-medium text-slate-400 cursor-not-allowed">
+                        Require approval
+                        <HelpCircle className="h-3 w-3" />
+                        <Badge className="bg-slate-100 text-slate-600 border-none text-[8px] font-bold py-0 h-4">NEW</Badge>
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Project & App Access Section */}
+            <div className="space-y-8">
+              <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+                <h2 className="text-lg font-medium text-slate-800">Project & app access</h2>
+              </div>
+
+              <div className="space-y-10">
+                {/* Project Access */}
+                <div className="space-y-4">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Access</Label>
+                  <div className="flex items-center gap-3">
+                    <Switch id="add-to-projects" className="data-[state=checked]:bg-black opacity-40 text-slate-300" />
+                    <Label htmlFor="add-to-projects" className="text-sm font-medium text-slate-600">Add to all new projects</Label>
+                  </div>
+                </div>
+
+                {/* Allowed Apps */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Allowed apps</Label>
+                    <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <ToggleGroup type="single" defaultValue="desktop" className="justify-start bg-slate-100 p-1 rounded-full w-fit">
+                    <ToggleGroupItem value="all" className="rounded-full px-6 py-2 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">All apps</ToggleGroupItem>
+                    <ToggleGroupItem value="desktop" className="rounded-full px-8 py-2 text-xs data-[state=on]:bg-white data-[state=on]:shadow-sm">Desktop only</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab !== "info" && activeTab !== "employment" && activeTab !== "roles" && activeTab !== "pay" && activeTab !== "worktime" && activeTab !== "settings" && (
           <div className="flex items-center justify-center py-12">
             <p className="text-muted-foreground">
               {tabs.find((t) => t.id === activeTab)?.label} content coming soon
