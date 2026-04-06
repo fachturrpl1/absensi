@@ -400,7 +400,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button className="bg-blue-500 hover:bg-blue-600 text-white h-10 px-6 rounded-md transition-colors shadow-sm" onClick={handleSave} disabled={isSaving}>
+              <Button className="bg-black hover:bg-slate-800 text-white h-10 px-6 rounded-md transition-colors shadow-sm" onClick={handleSave} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -525,29 +525,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-              {/* Hubstaff People BETA Banner */}
-              <div className="relative p-6 bg-blue-50/30 border border-blue-100 rounded-xl overflow-hidden mt-8">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-white rounded-lg shadow-sm border border-blue-50">
-                    <div className="flex items-center scale-75 origin-left">
-                      <span className="font-bold italic tracking-tighter text-blue-600">7</span>
-                      <span className="font-bold tracking-tighter italic text-blue-600">Hubstaff</span>
-                      <span className="ml-1 font-bold text-slate-800">People</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-800">Hubstaff People</p>
-                      <Badge className="bg-blue-100 text-blue-600 border-none text-[8px] font-bold h-4">BETA</Badge>
-                    </div>
-                    <p className="text-xs text-slate-600">Try these new features for free while Hubstaff People is in BETA</p>
-                    <ul className="text-xs text-slate-500 list-disc list-inside space-y-1 pt-2">
-                      <li>View IP addresses</li>
-                      <li>Create and manage custom fields</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+
             </div>
 
             {/* Contact Section */}
@@ -1250,11 +1228,11 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                       <ToggleGroupItem value="off" className="rounded-full px-6 py-2 data-[state=on]:bg-slate-50 transition-all font-medium text-sm">Off</ToggleGroupItem>
                     </ToggleGroup>
                     <div className="flex items-center gap-3">
-                      <Switch id="require-approval-settings" className="data-[state=checked]:bg-blue-500 opacity-40" disabled />
+                      <Switch id="require-approval-settings" className="data-[state=checked]:bg-black opacity-40" disabled />
                       <Label htmlFor="require-approval-settings" className="flex items-center gap-2 text-sm font-medium text-slate-400 cursor-not-allowed">
                         Require approval
                         <HelpCircle className="h-3 w-3" />
-                        <Badge className="bg-purple-100 text-purple-600 border-none text-[8px] font-bold py-0 h-4">NEW</Badge>
+                        <Badge className="bg-slate-200 text-slate-800 border-none text-[8px] font-bold py-0 h-4">NEW</Badge>
                       </Label>
                     </div>
                   </div>
@@ -1273,7 +1251,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                 <div className="space-y-4">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project Access</Label>
                   <div className="flex items-center gap-3">
-                    <Switch id="add-to-projects" className="data-[state=checked]:bg-blue-500 opacity-40 text-slate-300" />
+                    <Switch id="add-to-projects" className="data-[state=checked]:bg-black opacity-40 text-slate-300" />
                     <Label htmlFor="add-to-projects" className="text-sm font-medium text-slate-600">Add to all new projects</Label>
                   </div>
                 </div>
