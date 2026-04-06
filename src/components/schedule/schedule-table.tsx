@@ -189,7 +189,7 @@ export default function ScheduleTable({
                                                         </Button>
                                                     }
                                                 />
-                                                <Link href={`/schedule/${ws.id}`}>
+                                                <Link href={`/schedules/${ws.id}`}>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"

@@ -16,7 +16,7 @@ export interface GeoState {
 
 export interface GeoCountry {
   code: string;
-  label: string;   // konsisten dengan usage di hook & component
+  label: string;
   states: GeoState[];
 }
 

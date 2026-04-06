@@ -86,7 +86,7 @@ export interface BatchEntry {
 
 // src/types/attendance.ts
 
-export interface MemberOption {
+export interface MemberOption { 
   id: string;
   label: string;
   department: string;

@@ -93,6 +93,8 @@ export async function getMemberSchedule(organizationMemberId: string | number, d
 export async function updateAttendanceRecord(payload: {
   id: string;
   actual_check_in?: string | null;
+  actual_break_start?: string | null;
+  actual_break_end?: string | null;
   actual_check_out?: string | null;
   remarks?: string | null;
 }) {
@@ -137,22 +139,12 @@ export async function updateAttendanceRecord(payload: {
       }
     } catch (_) { }
 
-    const updateData: Record<string, any> = {};
-    if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in;
-    if (payload.actual_check_out !== undefined) updateData.actual_check_out = payload.actual_check_out;
-    if (payload.remarks !== undefined) updateData.remarks = payload.remarks;
-    if ((payload as { _computedStatus?: string })._computedStatus) {
-      updateData.status = (payload as { _computedStatus?: string })._computedStatus;
-    }
-    if ((payload as { _lateMinutes?: number | null })._lateMinutes !== undefined) {
-      updateData.late_minutes = (payload as { _lateMinutes?: number | null })._lateMinutes;
-    }
-    if ((payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes !== undefined) {
-      updateData.early_leave_minutes = (payload as { _earlyLeaveMinutes?: number | null })._earlyLeaveMinutes;
-    }
-    if ((payload as { _overtimeMinutes?: number | null })._overtimeMinutes !== undefined) {
-      updateData.overtime_minutes = (payload as { _overtimeMinutes?: number | null })._overtimeMinutes;
-    }
+    const updateData: Record<string, any> = {}
+    if (payload.actual_check_in !== undefined) updateData.actual_check_in = payload.actual_check_in
+    if (payload.actual_check_out !== undefined) updateData.actual_check_out = payload.actual_check_out
+    if (payload.actual_break_start !== undefined) updateData.actual_break_start = payload.actual_break_start
+    if (payload.actual_break_end !== undefined) updateData.actual_break_end = payload.actual_break_end
+    if (payload.remarks !== undefined) updateData.remarks = payload.remarks
 
     const { error } = await supabase
       .from('attendance_records')
@@ -610,12 +602,12 @@ export async function checkExistingAttendance(
 
     const exists = !!data;
     attendanceLogger.debug(`✓ Attendance check result: exists=${exists}`);
-    
+
     // PERBAIKAN: Kembalikan 'exists' (pakai 's') dan sertakan 'data'
-    return { 
-      success: true, 
-      exists: exists, 
-      data: data 
+    return {
+      success: true,
+      exists: exists,
+      data: data
     };
 
   } catch (err) {
