@@ -1,536 +1,578 @@
 "use client"
-import { useState, useEffect } from "react"
 
+import { useCallback, useMemo, useState } from "react"
 import { TabsContent } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SearchBar } from "@/components/toolbar/search-bar"
-import { Plus, Loader2, X } from "lucide-react"
-import { toast } from "sonner"
-import { QUICK_STATUSES } from "@/types/attendance"
-import { useMembers } from "@/hooks/attendance/add/use-members"
-import { useBatchAttendance } from "@/hooks/attendance/add/use-batch-attendance"
-import { type BatchAttendanceReturn } from "@/types/attendance"
-import { getMemberSchedule } from "@/action/attendance"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Search,
+  CheckSquare,
+  Square,
+  Loader2,
+  AlertCircle,
+  CalendarOff,
+  Ban,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Users,
+  ArrowRight,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { type BatchEntry } from "@/types/attendance"
+import { useBatchAttendanceV2, type BatchMemberRow } from "@/hooks/attendance/add/use-batch-attendancev2"
+import { BatchPreviewDialog } from "./batch-preview-dialog"
 import { UserAvatar } from "@/components/profile&image/user-avatar"
+import type { MemberOption } from "@/types/attendance"
 
-interface BatchAttendanceFormProps {
-  onSubmit: () => Promise<void>
-  onCancel: () => void
-  batch?: BatchAttendanceReturn
+function ScheduleStatusBadge({ row }: { row: BatchMemberRow }) {
+  if (row.scheduleStatus === "loading") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Loading...
+      </span>
+    )
+  }
+  if (row.scheduleStatus === "no_schedule") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-amber-600">
+        <AlertCircle className="h-3 w-3" />
+        No schedule
+      </span>
+    )
+  }
+  if (row.scheduleStatus === "holiday") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-amber-600">
+        <CalendarOff className="h-3 w-3" />
+        Non-working
+      </span>
+    )
+  }
+  if (row.isDuplicate) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-red-500">
+        <Ban className="h-3 w-3" />
+        Duplicate
+      </span>
+    )
+  }
+  return null
 }
 
-export function BatchForm({ onSubmit, onCancel, batch: externalBatch }: BatchAttendanceFormProps) {
-  const { members, departments, loading } = useMembers()
-  const localBatch = useBatchAttendance()
-  const batch = externalBatch || localBatch
-  const [entrySchedules, setEntrySchedules] = useState<Record<string, any>>({})
+interface MemberRowProps {
+  row: BatchMemberRow
+  mode: "realtime" | "retroactive"
+  onToggle: () => void
+  onOverride: (
+    field: "overrideCheckIn" | "overrideCheckOut" | "overrideBreakIn" | "overrideBreakOut",
+    value: string,
+  ) => void
+}
 
-  // Fetch missing schedules reactive-ly
-  useEffect(() => {
-    const fetchMissing = async () => {
-      const memberIds = batch.batchEntries
-        .map(e => e.memberId)
-        .filter(id => id && !entrySchedules[id]) as string[]
+function MemberRowItem({ row, mode, onToggle, onOverride }: MemberRowProps) {
+  const [expanded, setExpanded] = useState(false)
 
-      if (memberIds.length === 0) return
+  const isDisabled = row.isDuplicate
+  const hasWarning = row.hasWarning && !row.isDuplicate
 
-      const updates: Record<string, any> = { ...entrySchedules }
-      await Promise.all(memberIds.map(async id => {
-        const res = await getMemberSchedule(id, batch.batchCheckInDate)
-        if (res.success) {
-          updates[id] = res.data
-        } else {
-          // Store error to show in toast later
-          updates[id] = { _error: res.message || "No schedule" }
-        }
-      }))
-      setEntrySchedules(updates)
-    }
-    fetchMissing()
-  }, [batch.batchEntries, batch.batchCheckInDate, entrySchedules])
+  return (
+    <div
+      className={cn(
+        "rounded-xl border transition-all",
+        isDisabled
+          ? "border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/10 opacity-60"
+          : row.isSelected
+          ? "border-border bg-background"
+          : "border-border bg-muted/20",
+        hasWarning && !isDisabled && "border-amber-200 bg-amber-50/30 dark:border-amber-900/30",
+      )}
+    >
+      <div className="flex items-center gap-2.5 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={isDisabled}
+          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors disabled:pointer-events-none"
+        >
+          {row.isSelected ? (
+            <CheckSquare className="h-4 w-4 text-foreground" />
+          ) : (
+            <Square className="h-4 w-4" />
+          )}
+        </button>
 
-  const isMatch = (entry: BatchEntry, field: keyof BatchEntry, scheduleValue?: string | null) => {
-    if (!scheduleValue) return false
-    const val = (entry as any)[field]
-    return val === scheduleValue.slice(0, 5)
+        <UserAvatar
+          name={row.label}
+          photoUrl={row.avatar}
+          // PERBAIKAN 2: Konversi null menjadi undefined
+          userId={row.userId ?? undefined}
+          className="h-8 w-8 shrink-0 border border-border"
+        />
+
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate leading-tight">{row.label}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
+              {row.department}
+            </p>
+            <ScheduleStatusBadge row={row} />
+          </div>
+        </div>
+
+        {row.scheduleStatus === "ok" && row.startTime && (
+          <span className="text-[10px] text-muted-foreground font-mono shrink-0 hidden sm:block">
+            {row.startTime.slice(0, 5)}–{row.endTime?.slice(0, 5)}
+          </span>
+        )}
+
+        {row.isSelected && row.scheduleStatus === "ok" && !isDisabled && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] px-1.5 py-0 h-5 shrink-0",
+              row.computedStatus === "present" && "text-emerald-600 border-emerald-200 bg-emerald-50",
+              row.computedStatus === "late" && "text-amber-600 border-amber-200 bg-amber-50",
+              row.computedStatus === "absent" && "text-red-600 border-red-200 bg-red-50",
+            )}
+          >
+            {row.computedStatus}
+          </Badge>
+        )}
+
+        {mode === "retroactive" && row.scheduleStatus === "ok" && !isDisabled && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
+      </div>
+
+      {mode === "retroactive" && expanded && row.scheduleStatus === "ok" && !isDisabled && (
+        <div className="px-3 pb-3 grid grid-cols-2 sm:grid-cols-4 gap-2 border-t pt-2.5">
+          {[
+            { label: "Check In", field: "overrideCheckIn" as const, placeholder: row.startTime?.slice(0, 5) },
+            { label: "Check Out", field: "overrideCheckOut" as const, placeholder: row.endTime?.slice(0, 5) },
+            { label: "Break In", field: "overrideBreakIn" as const, placeholder: row.breakStart?.slice(0, 5) ?? "—" },
+            { label: "Break Out", field: "overrideBreakOut" as const, placeholder: row.breakEnd?.slice(0, 5) ?? "—" },
+          ].map(({ label, field, placeholder }) => (
+            <div key={field} className="space-y-1">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                {label}
+              </p>
+              <input
+                type="time"
+                value={(row[field] as string | undefined) ?? ""}
+                onChange={(e) => onOverride(field, e.target.value)}
+                placeholder={placeholder ?? ""}
+                className="w-full h-7 rounded-lg border bg-background px-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-foreground/20"
+              />
+              {placeholder && (
+                <p className="text-[9px] text-muted-foreground">Schedule: {placeholder}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface GroupSectionProps {
+  groupKey: string
+  groupLabel: string
+  rows: BatchMemberRow[]
+  mode: "realtime" | "retroactive"
+  onToggleAll: (rows: BatchMemberRow[]) => void
+  onToggle: (memberId: string) => void
+  onOverride: (
+    memberId: string,
+    field: "overrideCheckIn" | "overrideCheckOut" | "overrideBreakIn" | "overrideBreakOut",
+    value: string,
+  ) => void
+}
+
+function GroupSection({
+  groupKey,
+  groupLabel,
+  rows,
+  mode,
+  onToggleAll,
+  onToggle,
+  onOverride,
+}: GroupSectionProps) {
+  const isWarningGroup =
+    groupKey === "__no_schedule__" || groupKey === "__holiday__"
+  const isLoadingGroup = groupKey === "__loading__"
+
+  const selectableRows = rows.filter((r) => !r.isDuplicate)
+  const allSelected = selectableRows.length > 0 && selectableRows.every((r) => r.isSelected)
+  const selectedCount = rows.filter((r) => r.isSelected && !r.isDuplicate).length
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 px-1">
+        {!isWarningGroup && !isLoadingGroup && selectableRows.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onToggleAll(selectableRows)}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {allSelected ? (
+              <CheckSquare className="h-3.5 w-3.5 text-foreground" />
+            ) : (
+              <Square className="h-3.5 w-3.5" />
+            )}
+          </button>
+        )}
+
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {isWarningGroup ? (
+            <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          ) : isLoadingGroup ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+          ) : (
+            <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          )}
+          <span
+            className={cn(
+              "text-xs font-semibold truncate",
+              isWarningGroup && "text-amber-600 dark:text-amber-400",
+              isLoadingGroup && "text-muted-foreground",
+            )}
+          >
+            {groupLabel}
+          </span>
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {selectedCount}/{rows.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-1 pl-1">
+        {rows.map((row) => (
+          <MemberRowItem
+            key={row.memberId}
+            row={row}
+            mode={mode}
+            onToggle={() => onToggle(row.memberId)}
+            onOverride={(field, value) => onOverride(row.memberId, field, value)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+interface MemberPickerProps {
+  members: MemberOption[]
+  addedIds: Set<string>
+  onAdd: (ids: string[]) => void
+}
+
+function MemberPicker({ members, addedIds, onAdd }: MemberPickerProps) {
+  const [search, setSearch] = useState("")
+  const [dept, setDept] = useState("all")
+
+  const departments = useMemo(
+    () => Array.from(new Set(members.map((m) => m.department))).sort(),
+    [members],
+  )
+
+  const filtered = members.filter((m) => {
+    const matchSearch =
+      !search ||
+      m.label.toLowerCase().includes(search.toLowerCase()) ||
+      m.department.toLowerCase().includes(search.toLowerCase())
+    const matchDept = dept === "all" || m.department === dept
+    return matchSearch && matchDept
+  })
+
+  const allFilteredAdded = filtered.every((m) => addedIds.has(m.id))
+
+  const handleAddAll = () => {
+    const toAdd = filtered.filter((m) => !addedIds.has(m.id)).map((m) => m.id)
+    if (toAdd.length > 0) onAdd(toAdd)
   }
 
   return (
-    <TabsContent value="batch" className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Add Batch Attendance ({batch.batchEntries.length} records)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Batch Date & Time */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Batch Date & Time</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Check-in Date</label>
-                  <Input
-                    type="date"
-                    value={batch.batchCheckInDate}
-                    onChange={(e) => batch.setBatchCheckInDate(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                  <p className="text-[9px] text-muted-foreground mt-1">
-                    * Date for all entries
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Check-in Time</label>
-                  <Input
-                    type="time"
-                    value={batch.batchCheckInTime}
-                    onChange={(e) => batch.setBatchCheckInTime(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Check-out Date</label>
-                  <Input
-                    type="date"
-                    value={batch.batchCheckOutDate}
-                    onChange={(e) => batch.setBatchCheckOutDate(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Check-out Time</label>
-                  <Input
-                    type="time"
-                    value={batch.batchCheckOutTime}
-                    onChange={(e) => batch.setBatchCheckOutTime(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="flex flex-col gap-2 h-full">
+      <div className="relative shrink-0">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search member..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-xl border bg-background pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-foreground/20"
+        />
+      </div>
 
-          {/* Batch Breaks */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Batch Break Times (Default)</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-xs text-muted-foreground">Break In</label>
-                  <Input
-                    type="time"
-                    value={batch.batchBreakStartTime}
-                    onChange={(e) => batch.setBatchBreakStartTime(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Break Out</label>
-                  <Input
-                    type="time"
-                    value={batch.batchBreakEndTime}
-                    onChange={(e) => batch.setBatchBreakEndTime(e.target.value)}
-                    disabled={batch.isSubmitting || loading}
-                  />
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-9 px-2"
-                  onClick={() => {
-                    // We don't have a single member for "Batch Default", 
-                    // but maybe we can just apply from the first member's schedule if available?
-                    // Or just leave it as is for individual presets.
-                  }}
-                  disabled={true}
-                >
-                  Load Default Schedule (Unavailable)
-                </Button>
-              </div>
-            </div>
-          </div>
+      {departments.length > 1 && (
+        <Select value={dept} onValueChange={setDept}>
+          <SelectTrigger className="h-8 text-xs rounded-xl shrink-0">
+            <SelectValue placeholder="All departments" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="text-xs">All Departments</SelectItem>
+            {departments.map((d) => (
+              <SelectItem key={d} value={d} className="text-xs">{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
-          {/* Batch Status & Notes */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Batch Status & Notes</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Default Status</label>
-                <Select
-                  disabled={batch.isSubmitting || loading}
-                  value={batch.batchStatus}
-                  onValueChange={(value: any) => batch.setBatchStatus(value)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUICK_STATUSES.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        <div className="flex items-center">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.color}`}>
-                            {status.label}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">Default Notes</label>
-                <Textarea
-                  placeholder="Notes for all records (optional)..."
-                  rows={1}
-                  className="min-h-[38px] py-2"
-                  value={batch.batchRemarks}
-                  onChange={(e) => batch.setBatchRemarks(e.target.value)}
-                  disabled={batch.isSubmitting || loading}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Add Members */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">
-                Quick Add Members ({members.length} available)
-              </label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => batch.addBatchEntry()}
-                disabled={batch.isSubmitting || loading}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                Add Empty Row
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="relative">
-                <SearchBar
-                  placeholder="Search members..."
-                  initialQuery={batch.memberSearch}
-                  onSearch={batch.setMemberSearch}
-                  disabled={batch.isSubmitting || loading}
-                />
-              </div>
-
-              <div className="flex gap-2 flex-wrap">
-                <Select
-                  value={batch.departmentFilter}
-                  onValueChange={batch.setDepartmentFilter}
-                  disabled={batch.isSubmitting || loading}
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue placeholder="All Depts" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments.map(dept => (
-                      <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-2 border rounded-md">
-                {members
-                  .filter(m =>
-                    (batch.departmentFilter === "all" || m.department === batch.departmentFilter) &&
-                    (!batch.memberSearch ||
-                      m.label.toLowerCase().includes(batch.memberSearch.toLowerCase()) ||
-                      m.department.toLowerCase().includes(batch.memberSearch.toLowerCase()))
-                  )
-                  .slice(0, 12)
-                  .map(member => {
-                    const alreadyAdded = batch.batchEntries.some(e => e.memberId === member.id)
-                    return (
-                      <Button
-                        key={member.id}
-                        type="button"
-                        variant={alreadyAdded ? "secondary" : "outline"}
-                        size="sm"
-                        onClick={() => {
-                          if (!alreadyAdded) {
-                            batch.addBatchEntry(member.id)
-                            toast.success(`Added ${member.label}`)
-                          }
-                        }}
-                        disabled={batch.isSubmitting || loading}
-                        className="h-auto py-1 text-xs truncate"
-                      >
-                        <Plus className={`mr-1 h-3 w-3 ${alreadyAdded ? 'opacity-50' : ''}`} />
-                        <span className="truncate">{member.label}</span>
-                      </Button>
-                    )
-                  })}
-              </div>
-            </div>
-          </div>
-
-          {/* Current Batch Entries */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium flex items-center gap-2">
-              Current Batch ({batch.batchEntries.length})
-              {batch.batchEntries.length > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => batch.clearAllEntries()}
-                  disabled={batch.isSubmitting || loading}
-                >
-                  <X className="h-3 w-3" />
-                  Clear All
-                </Button>
-              )}
-            </label>
-
-            {batch.batchEntries.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg text-muted-foreground">
-                <Plus className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-sm">No attendance records yet</p>
-                <p className="text-xs">Click "Add Empty Row" or select members above</p>
-              </div>
-            ) : (
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                {batch.batchEntries.map(entry => {
-                  const member = members.find(m => m.id === entry.memberId)
-                  const sched = entry.memberId ? entrySchedules[entry.memberId] : null
-                  return (
-                    <div key={entry.id} className="p-4 border rounded-xl bg-zinc-50 dark:bg-zinc-900/40 space-y-3 relative group">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <UserAvatar
-                            name={member?.label || "?"}
-                            photoUrl={member?.avatar}
-                            userId={member?.userId}
-                            className="h-8 w-8 border border-border shadow-sm shrink-0"
-                          />
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {member?.label || "Select Member..."}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground uppercase">{member?.department || "-"}</p>
-                            {sched && (
-                              <p className="text-[9px] text-slate-700 font-medium">
-                                📅 {sched.start_time?.slice(0, 5)} - {sched.end_time?.slice(0, 5)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => batch.removeBatchEntry(entry.id)}
-                          disabled={batch.isSubmitting || loading}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase">Check-in</label>
-                          <Input
-                            type="time"
-                            className="h-8 text-xs"
-                            value={entry.checkInTime}
-                            onChange={(e) => batch.updateBatchEntry(entry.id, "checkInTime", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase">Check-out</label>
-                          <Input
-                            type="time"
-                            className="h-8 text-xs"
-                            value={entry.checkOutTime || ""}
-                            onChange={(e) => batch.updateBatchEntry(entry.id, "checkOutTime", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase">Break In</label>
-                          <Input
-                            type="time"
-                            className="h-8 text-xs"
-                            value={entry.breakStartTime || ""}
-                            onChange={(e) => batch.updateBatchEntry(entry.id, "breakStartTime", e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase">Break Out</label>
-                          <Input
-                            type="time"
-                            className="h-8 text-xs"
-                            value={entry.breakEndTime || ""}
-                            onChange={(e) => batch.updateBatchEntry(entry.id, "breakEndTime", e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-1">
-                        <div className="flex gap-1 overflow-x-auto pb-1 no-scrollbar">
-                          <Button
-                            type="button"
-                            variant={isMatch(entry, "checkInTime", sched?.start_time) ? "default" : "secondary"}
-                            className={cn(
-                              "h-6 px-2 text-[10px] whitespace-nowrap",
-                              isMatch(entry, "checkInTime", sched?.start_time) && "bg-zinc-900 text-white hover:bg-zinc-900/90"
-                            )}
-                            onClick={() => {
-                              if (sched?.start_time) {
-                                const checkInTime = sched.start_time.slice(0, 5)
-                                batch.updateBatchEntry(entry.id, "checkInTime", checkInTime)
-
-                                // Auto-calculate status: if current time > schedule start time, set to late
-                                const now = new Date()
-                                const currentH = now.getHours()
-                                const currentM = now.getMinutes()
-                                const [schedH, schedM] = checkInTime.split(":").map(Number)
-
-                                if (currentH > schedH || (currentH === schedH && currentM > schedM)) {
-                                  batch.updateBatchEntry(entry.id, "status", "late")
-                                } else {
-                                  batch.updateBatchEntry(entry.id, "status", "present")
-                                }
-
-                                toast.info(`Status for ${member?.label}: ${currentH > schedH || (currentH === schedH && currentM > schedM) ? "Late" : "On-Time"}`)
-                              } else if (sched?._error) {
-                                toast.error(sched._error)
-                              } else if (!sched) {
-                                toast.error("No schedule assigned for this date")
-                              } else {
-                                toast.error("Start time is not set in schedule")
-                              }
-                            }}
-                          >
-                            Check-in
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={isMatch(entry, "checkOutTime", sched?.core_hours_end) ? "default" : "secondary"}
-                            className={cn(
-                              "h-6 px-2 text-[10px] whitespace-nowrap",
-                              isMatch(entry, "checkOutTime", sched?.core_hours_end) && "bg-zinc-900 text-white hover:bg-zinc-900/90"
-                            )}
-                            onClick={() => {
-                              if (sched?.core_hours_end) {
-                                batch.updateBatchEntry(entry.id, "checkOutTime", sched.core_hours_end.slice(0, 5))
-                              } else if (sched?._error) {
-                                toast.error(sched._error)
-                              } else if (!sched) {
-                                toast.error("No schedule assigned for this date")
-                              } else {
-                                toast.error("Core hours end is not set in schedule")
-                              }
-                            }}
-                          >
-                            Check-out
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={isMatch(entry, "breakStartTime", sched?.break_start) ? "default" : "secondary"}
-                            className={cn(
-                              "h-6 px-2 text-[10px] whitespace-nowrap",
-                              isMatch(entry, "breakStartTime", sched?.break_start) && "bg-zinc-900 text-white hover:bg-zinc-900/90"
-                            )}
-                            onClick={() => {
-                              if (sched?.break_start) {
-                                batch.updateBatchEntry(entry.id, "breakStartTime", sched.break_start.slice(0, 5))
-                              } else if (sched?._error) {
-                                toast.error(sched._error)
-                              } else if (!sched) {
-                                toast.error("No schedule assigned for this date")
-                              } else {
-                                toast.error("Break start is not set in schedule")
-                              }
-                            }}
-                          >
-                            Break In
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={isMatch(entry, "breakEndTime", sched?.break_end) ? "default" : "secondary"}
-                            className={cn(
-                              "h-6 px-2 text-[10px] whitespace-nowrap",
-                              isMatch(entry, "breakEndTime", sched?.break_end) && "bg-zinc-900 text-white hover:bg-zinc-900/90"
-                            )}
-                            onClick={() => {
-                              if (sched?.break_end) {
-                                batch.updateBatchEntry(entry.id, "breakEndTime", sched.break_end.slice(0, 5))
-                              } else if (sched?._error) {
-                                toast.error(sched._error)
-                              } else if (!sched) {
-                                toast.error("No schedule assigned for this date")
-                              } else {
-                                toast.error("Break end is not set in schedule")
-                              }
-                            }}
-                          >
-                            Break Out
-                          </Button>
-                        </div>
-                        <Select
-                          value={entry.status}
-                          onValueChange={(val) => batch.updateBatchEntry(entry.id, "status", val)}
-                        >
-                          <SelectTrigger className="h-6 w-24 text-[10px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {QUICK_STATUSES.map(s => (
-                              <SelectItem key={s.value} value={s.value} className="text-[10px]">
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex justify-end gap-3 pt-4 border-t">
+      {filtered.length > 0 && (
         <Button
           type="button"
           variant="outline"
-          onClick={onCancel}
-          disabled={batch.isSubmitting || loading}
+          size="sm"
+          onClick={handleAddAll}
+          disabled={allFilteredAdded}
+          className="h-7 text-xs rounded-xl shrink-0 gap-1"
         >
-          <X className="mr-2 h-4 w-4" />
-          Cancel
+          <Users className="h-3 w-3" />
+          Add All ({filtered.filter((m) => !addedIds.has(m.id)).length})
         </Button>
-        <Button
-          onClick={onSubmit}
-          disabled={batch.isSubmitting || batch.batchEntries.length === 0 || loading}
-        >
-          {batch.isSubmitting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : null}
-          {batch.isSubmitting ? 'Saving...' : `Save ${batch.batchEntries.length} Records`}
-        </Button>
+      )}
+
+      <div className="flex-1 overflow-y-auto space-y-0.5 pr-1">
+        {filtered.length === 0 ? (
+          <p className="text-center text-xs text-muted-foreground py-8">No members found</p>
+        ) : (
+          filtered.map((m) => {
+            const added = addedIds.has(m.id)
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => !added && onAdd([m.id])}
+                disabled={added}
+                className={cn(
+                  "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all text-xs",
+                  added
+                    ? "opacity-40 cursor-not-allowed bg-muted/30"
+                    : "hover:bg-muted/60 active:scale-[0.98]",
+                )}
+              >
+                <UserAvatar
+                  name={m.label}
+                  photoUrl={m.avatar}
+                  // PERBAIKAN 2: Konversi null menjadi undefined
+                  userId={m.userId ?? undefined}
+                  className="h-7 w-7 shrink-0 border border-border"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold truncate leading-tight">{m.label}</p>
+                  <p className="text-[10px] opacity-60 uppercase tracking-wide truncate">{m.department}</p>
+                </div>
+                {!added && <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100" />}
+              </button>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface BatchFormProps {
+  members: MemberOption[]
+  timezone: string
+  onCancel: () => void
+  onSubmit?: () => Promise<void>
+  batch?: any
+}
+
+export function BatchForm({ members, timezone, onCancel }: BatchFormProps) {
+  const bv2 = useBatchAttendanceV2(members, timezone)
+
+  const addedIds = useMemo(
+    () => new Set<string>(bv2.rows.map((r: BatchMemberRow) => r.memberId)),
+    [bv2.rows],
+  )
+
+  const handleAdd = useCallback(
+    (ids: string[]) => { bv2.addMembers(ids) },
+    [bv2],
+  )
+
+  return (
+    <TabsContent value="batch" asChild>
+      <div className="flex flex-col gap-3 mt-2">
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex rounded-xl border overflow-hidden shrink-0">
+            {(["realtime", "retroactive"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => bv2.setMode(m)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-colors",
+                  bv2.mode === m
+                    ? "bg-foreground text-background"
+                    : "bg-background text-foreground hover:bg-muted/60",
+                )}
+              >
+                {m === "realtime" ? "Real-time" : "Retroactive"}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-muted-foreground">Date:</span>
+            <input
+              type="date"
+              value={bv2.date}
+              onChange={(e) => bv2.setDate(e.target.value)}
+              className="h-8 rounded-xl border bg-background px-3 text-xs focus:outline-none focus:ring-2 focus:ring-foreground/20"
+            />
+          </div>
+
+          {bv2.rows.length > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-muted-foreground">
+                {bv2.stats.selected} selected
+              </span>
+              {bv2.stats.duplicates > 0 && (
+                <Badge variant="outline" className="text-[10px] text-red-500 border-red-200 bg-red-50 gap-1">
+                  <Ban className="h-3 w-3" />
+                  {bv2.stats.duplicates} duplicate
+                </Badge>
+              )}
+              {bv2.stats.noSchedule > 0 && (
+                <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200 bg-amber-50 gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {bv2.stats.noSchedule} no schedule
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
+
+        <p className="text-[11px] text-muted-foreground px-0.5">
+          {bv2.mode === "realtime"
+            ? "Real-time mode: Check-in time will be set to now() when submitted. Only Check In is recorded."
+            : "Retroactive mode: Times are taken from each member's schedule. Expand a row to override."}
+        </p>
+
+        <div className="flex gap-4 h-[520px] overflow-hidden">
+          <div className="hidden md:flex w-[260px] shrink-0 flex-col h-full border-r pr-3">
+            <MemberPicker
+              members={members}
+              addedIds={addedIds}
+              onAdd={handleAdd}
+            />
+          </div>
+
+          <div className="md:hidden shrink-0">
+          </div>
+
+          <div className="flex-1 flex flex-col gap-2 min-w-0 h-full overflow-hidden">
+            {bv2.rows.length > 0 && (
+              <div className="flex gap-2 shrink-0">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Filter batch..."
+                    value={bv2.search}
+                    onChange={(e) => bv2.setSearch(e.target.value)}
+                    className="w-full h-8 rounded-xl border bg-background pl-8 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+              {bv2.rows.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full border-2 border-dashed rounded-2xl gap-3 text-center">
+                  <Users className="h-8 w-8 text-muted-foreground/40" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      No members added yet
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      Select members from the left panel
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                (Object.entries(bv2.groupedRows) as [string, { label: string; rows: BatchMemberRow[] }][]).map(([key, { label, rows }]) => (
+                  <GroupSection
+                    key={key}
+                    groupKey={key}
+                    groupLabel={label}
+                    rows={rows}
+                    mode={bv2.mode}
+                    onToggleAll={bv2.toggleSelectAll}
+                    onToggle={bv2.toggleSelect}
+                    onOverride={bv2.updateOverride}
+                  />
+                ))
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 shrink-0 pt-2 border-t">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onCancel}
+                className="text-xs"
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={bv2.buildPreview}
+                disabled={bv2.stats.selected === 0 || bv2.isLoadingSchedules}
+                className="gap-2 min-w-[140px]"
+              >
+                {bv2.isLoadingSchedules ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading schedules...
+                  </>
+                ) : (
+                  <>
+                    Preview & Submit ({bv2.stats.selected})
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <BatchPreviewDialog
+          open={bv2.showPreview}
+          onOpenChange={bv2.setShowPreview}
+          items={bv2.previewItems}
+          date={bv2.date}
+          timezone={timezone}
+          isSubmitting={bv2.isSubmitting}
+          onToggleItem={bv2.togglePreviewItem}
+          onUpdateStatus={bv2.updatePreviewStatus}
+          onConfirm={bv2.submitBatch}
+        />
       </div>
     </TabsContent>
   )

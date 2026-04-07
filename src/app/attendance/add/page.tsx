@@ -91,9 +91,9 @@ export default function AttendancePage() {
           />
 
           <BatchForm
-            onSubmit={async () => { await batch.submitBatch() }}
+            members={members}
+            timezone={orgTimezone}
             onCancel={() => router.back()}
-            batch={batch}
           />
         </Tabs>
 
