@@ -31,7 +31,7 @@ export interface ClientFormData {
     budgetCost: string
     budgetNotifyAt: string
     budgetResets: string
-    budgetStartDate: string
+    startDate: string
     budgetIncludeNonBillable: boolean
     invoiceNotesCustom: boolean
     invoiceNotes: string
@@ -62,7 +62,7 @@ const defaultForm: ClientFormData = {
     budgetCost: "",
     budgetNotifyAt: "80",
     budgetResets: "never",
-    budgetStartDate: "",
+    startDate: "",
     budgetIncludeNonBillable: false,
     invoiceNotesCustom: false,
     invoiceNotes: "",
@@ -235,7 +235,7 @@ export function AddClientDialog({ open, onOpenChange, onSave, initialData }: Add
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">START DATE <span className="text-gray-400">ⓘ</span></label>
-                                <Input type="date" value={formData.budgetStartDate} onChange={(e) => setFormData({ ...formData, budgetStartDate: e.target.value })} />
+                                <Input type="date" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} />
                             </div>
                         </div>
 

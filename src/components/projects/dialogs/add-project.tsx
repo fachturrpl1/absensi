@@ -234,7 +234,7 @@ export default function AddProjectDialog(props: AddProjectDialogProps) {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-xs flex items-center gap-1">START DATE <span className="text-muted-foreground">ⓘ</span></label>
-                                            <Input type="date" value={form.budgetStartDate || ""} onChange={(e) => onFormChange(s => ({ ...s, budgetStartDate: e.target.value }))} />
+                                            <Input type="date" value={form.startDate || ""} onChange={(e) => onFormChange(s => ({ ...s, startDate: e.target.value }))} />
                                         </div>
                                     </div>
 

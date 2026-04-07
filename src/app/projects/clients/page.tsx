@@ -332,7 +332,7 @@ export default function ClientsPage() {
                             budgetCost: editingClient.budgetAmount?.toString() || "",
                             budgetNotifyAt: editingClient.notifyPercentage?.toString() || "80",
                             budgetResets: editingClient.budgetType?.includes('monthly') ? 'monthly' : 'never',
-                            budgetStartDate: "",
+                            startDate: "",
                             budgetIncludeNonBillable: false,
                             invoiceNotesCustom: !!editingClient.invoiceNotes,
                             invoiceNotes: editingClient.invoiceNotes || "",

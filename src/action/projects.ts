@@ -252,6 +252,7 @@ export const createProject = async (
             code,
             name: payload.name,
             is_billable: payload.is_billable !== false,
+            start_date: payload.start_date,
             lifecycle_status: "active",
             metadata: payload.metadata ?? {},
         })
@@ -278,6 +279,7 @@ export const updateProject = async (id: number, payload: UpdateProjectPayload) =
     const updateData: Record<string, unknown> = {};
     if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.is_billable !== undefined) updateData.is_billable = payload.is_billable;
+    if (payload.start_date !== undefined) updateData.start_date = payload.start_date;
     if (payload.metadata !== undefined) updateData.metadata = payload.metadata;
     if (payload.lifecycle_status !== undefined) updateData.lifecycle_status = payload.lifecycle_status;
     updateData.updated_at = new Date().toISOString();

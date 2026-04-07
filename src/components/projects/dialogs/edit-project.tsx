@@ -30,9 +30,9 @@ const emptyForm: NewProjectForm = {
     budgetStopTimers: false,
     budgetStopAt: "100",
     budgetResets: "never",
-    budgetStartDate: null,
+    startDate: null,
     budgetIncludeNonBillable: false,
-    memberLimits: [{ members: [], type: "", basedOn: "", cost: "", resets: "never", startDate: null }],
+    memberLimits: [{ members: [], type: "", basedOn: "", cost: "", resets: "never", startDate: "" }],
     memberLimitNotifyAt: "80",
     memberLimitNotifyMembers: false,
 }
@@ -65,6 +65,7 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                     const matched = teams.find(team => team.name === t)
                     return matched ? String(matched.id) : t
                 }) || [],
+                startDate: null,
             }))
         } else {
             setForm(emptyForm)
@@ -306,7 +307,7 @@ export default function EditProjectDialog(props: EditProjectDialogProps) {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs flex items-center gap-1">START DATE <span className="text-muted-foreground">ⓘ</span></label>
-                                        <Input type="date" value={form.budgetStartDate || ""} onChange={(e) => setForm(s => ({ ...s, budgetStartDate: e.target.value }))} />
+                                        <Input type="date" value={form.startDate || ""} onChange={(e) => setForm(s => ({ ...s, startDate: e.target.value }))} />
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">

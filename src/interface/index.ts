@@ -148,7 +148,6 @@ export interface IProjectMetadata {
     budgetStopTimers?: boolean;
     budgetStopAt?: string;
     budgetResets?: string;
-    budgetStartDate?: string | null;
     budgetIncludeNonBillable?: boolean;
     memberLimits?: Array<{
         members: string[];
@@ -283,6 +282,7 @@ export interface ISimpleMember {
 export interface CreateProjectPayload {
     name: string;
     is_billable?: boolean;
+    start_date?: string | null;
     metadata?: IProjectMetadata;
     teams?: number[];
 }
@@ -290,6 +290,7 @@ export interface CreateProjectPayload {
 export interface UpdateProjectPayload {
     name?: string;
     is_billable?: boolean;
+    start_date?: string | null;
     metadata?: IProjectMetadata;
     teams?: number[];
     lifecycle_status?: string;
@@ -320,10 +321,10 @@ export interface NewProjectForm {
     budgetNotifyMembers: boolean;
     budgetNotifyAt: string;
     budgetNotifyWho: string;
+    startDate: string | null;
     budgetStopTimers: boolean;
     budgetStopAt: string;
     budgetResets: string;
-    budgetStartDate: string | null;
     budgetIncludeNonBillable: boolean;
     memberLimits: MemberLimit[];
     memberLimitNotifyAt: string;
