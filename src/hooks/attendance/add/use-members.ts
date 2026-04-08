@@ -42,10 +42,11 @@ export function useMembers() {
 
   const departments = Array.from(new Set(members.map(m => m.department))).sort()
 
-  // ✅ RETURN INI:
+  // isPending: true saat belum ada data sama sekali (termasuk saat org baru load)
+  // isFetching: true saat ada network request aktif
   return {
-    members,      // MemberOption[]
-    departments,  // string[]
-    loading: query.isLoading
+    members,
+    departments,
+    loading: query.isPending || query.isFetching
   }
 }
