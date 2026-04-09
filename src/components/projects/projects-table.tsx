@@ -99,8 +99,8 @@ export function ProjectsTable(props: TableProjectsProps) {
   }
 
   return (
-    <div>
-      <Table>
+    <div className="w-full overflow-x-auto">
+      <Table className="min-w-[1000px]">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             <TableHead className="w-10">
@@ -111,7 +111,7 @@ export function ProjectsTable(props: TableProjectsProps) {
                 Name <SortIcon field="name" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
-            <TableHead className="hidden md:table-cell">
+            <TableHead>
               <span className="text-xs font-medium uppercase tracking-wide">Description</span>
             </TableHead>
             <TableHead>
@@ -124,25 +124,25 @@ export function ProjectsTable(props: TableProjectsProps) {
                 Status <SortIcon field="lifecycleStatus" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
-            <TableHead className="hidden sm:table-cell">
+            <TableHead>
               <span className="text-xs font-medium uppercase tracking-wide">Billable</span>
             </TableHead>
-            <TableHead className="hidden lg:table-cell">
+            <TableHead>
               <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("budgetAmount")}>
                 Budget <SortIcon field="budgetAmount" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
-            <TableHead className="hidden xl:table-cell">
+            <TableHead>
               <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("startDate")}>
                 Start Date <SortIcon field="startDate" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
-            <TableHead className="hidden xl:table-cell">
+            <TableHead>
               <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("endDate")}>
                 End Date <SortIcon field="endDate" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
-            <TableHead className="hidden xl:table-cell">
+            <TableHead>
               <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("createdAt")}>
                 Created At <SortIcon field="createdAt" current={sortField} dir={sortDir} />
               </button>
@@ -240,36 +240,49 @@ export function ProjectsTable(props: TableProjectsProps) {
                     </div>
                   </TableCell>
 
-                  <TableCell className="hidden md:table-cell max-w-[200px]">
-                    <span className="text-sm text-muted-foreground truncate block">
-                      {p.description || <span className="italic opacity-40">No description</span>}
-                    </span>
+                  <TableCell className="max-w-[200px]">
+                    {p.description ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-sm text-muted-foreground truncate block cursor-pointer">
+                            {p.description}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm whitespace-pre-wrap">
+                          {p.description}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic opacity-40 truncate block">
+                        No description
+                      </span>
+                    )}
                   </TableCell>
 
                   <TableCell><PriorityBadge priority={p.priority} /></TableCell>
                   <TableCell><StatusBadge status={p.lifecycleStatus} /></TableCell>
 
-                  <TableCell className="hidden sm:table-cell">
+                  <TableCell>
                     <span className={`text-xs font-medium ${p.isBillable ? "text-emerald-600" : "text-muted-foreground"}`}>
                       {p.isBillable ? "Billable" : "Non-billable"}
                     </span>
                   </TableCell>
 
-                  <TableCell className="hidden lg:table-cell">
+                  <TableCell>
                     <span className="text-sm text-muted-foreground font-mono">{p.budgetLabel}</span>
                   </TableCell>
 
-                  <TableCell className="hidden xl:table-cell">
+                  <TableCell>
                     <span className={`text-sm ${notStarted ? "text-orange-600 font-medium" : "text-muted-foreground"}`}>
                       {formatDate(p.startDate)}
                     </span>
                   </TableCell>
 
-                  <TableCell className="hidden xl:table-cell">
+                  <TableCell>
                     <span className="text-sm text-muted-foreground">{formatDate(p.endDate)}</span>
                   </TableCell>
 
-                  <TableCell className="hidden xl:table-cell">
+                  <TableCell>
                     <span className="text-sm text-muted-foreground">{formatDate(p.createdAt)}</span>
                   </TableCell>
 
