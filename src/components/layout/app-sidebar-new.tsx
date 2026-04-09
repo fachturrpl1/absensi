@@ -203,7 +203,7 @@ const getSidebarGroups = (): NavGroup[] => [
         subItems: [
           { title: 'Members', url: '/members', icon: Users },
           { title: 'Fingerprint', url: '/finger', icon: Fingerprint },
-          { title: 'Groups', url: '/group', icon: Building2 },
+          { title: 'Groups', url: '/groups', icon: Building2 },
           { title: 'Positions', url: '/position', icon: Briefcase },
         ],
       },

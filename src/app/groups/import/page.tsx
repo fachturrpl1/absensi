@@ -104,7 +104,7 @@ export default function GroupImportPage() {
         formData.append("sheetName", chosenSheet)
       }
 
-      const response = await fetch("/api/group/import/headers", {
+      const response = await fetch("/api/groups/import/headers", {
         method: "POST",
         body: formData,
       })
@@ -225,7 +225,7 @@ export default function GroupImportPage() {
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
 
-      const response = await fetch("/api/group/import/process", {
+      const response = await fetch("/api/groups/import/process", {
         method: "POST",
         body: formData,
       })
@@ -299,7 +299,7 @@ export default function GroupImportPage() {
       formData.append("headerRowCount", String(headerRowCount || 1))
       if (sheetName) formData.append("sheetName", sheetName)
 
-      const response = await fetch("/api/group/import/process", {
+      const response = await fetch("/api/groups/import/process", {
         method: "POST",
         body: formData,
       })

@@ -25,7 +25,7 @@ export function getGroupColumns({
       cell: ({ row }) => {
         const slug = encodeURIComponent(row.original.code ?? "no-group")
         return (
-          <Link href={`/group/${slug}/members`} className="hover:underline text-sm font-mono">
+          <Link href={`/groups/${slug}/members`} className="hover:underline text-sm font-mono">
             {row.original.code}
           </Link>
         )
@@ -37,7 +37,7 @@ export function getGroupColumns({
       cell: ({ row }) => {
         const slug = encodeURIComponent(row.original.code ?? "no-group")
         return (
-          <Link href={`/group/${slug}/members`} className="hover:underline font-medium">
+          <Link href={`/groups/${slug}/members`} className="hover:underline font-medium">
             {row.original.name}
           </Link>
         )
@@ -74,7 +74,7 @@ export function getGroupColumns({
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Link href={`/group/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ""}`}>
+            <Link href={`/groups/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ""}`}>
               <Button variant="ghost" size="icon" className="h-8 w-8" title="Move member(s)">
                 <ChevronRight className="h-4 w-4" />
               </Button>

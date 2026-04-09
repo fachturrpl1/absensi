@@ -246,7 +246,7 @@ export default function GroupsPage() {
       cell: ({ row }) => {
         const slug = getGroupSlug(row.original)
         return (
-          <Link href={`/group/${slug}/members`} className="hover:underline text-sm font-mono">
+          <Link href={`/groups/${slug}/members`} className="hover:underline text-sm font-mono">
             {row.original.code}
           </Link>
         )
@@ -259,7 +259,7 @@ export default function GroupsPage() {
         const slug = getGroupSlug(row.original)
         return (
           // FIX: tampilkan .name bukan .code
-          <Link href={`/group/${slug}/members`} className="hover:underline font-medium">
+          <Link href={`/groups/${slug}/members`} className="hover:underline font-medium">
             {row.original.name}
           </Link>
         )
@@ -302,7 +302,7 @@ export default function GroupsPage() {
             >
               <Pencil className="h-4 w-4" />
             </Button>
-            <Link href={`/group/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ""}`}>
+            <Link href={`/groups/move?id=${row.original.id}${isNoGroup ? `&orgId=${organizationId}` : ""}`}>
               <Button
                 variant="ghost"
                 size="icon"
@@ -393,7 +393,7 @@ export default function GroupsPage() {
               Refresh
             </Button>
             <Button asChild variant="outline" size="sm" className="h-9">
-              <Link href="/group/import">
+              <Link href="/groups/import">
                 <FileSpreadsheet className="mr-2 h-4 w-4" />Import
               </Link>
             </Button>
