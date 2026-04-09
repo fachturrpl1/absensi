@@ -343,9 +343,6 @@ export default function GroupsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Groups</h1>
-          <Button size="sm" onClick={openAdd}>
-            <Plus className="h-4 w-4" /> Add Group
-          </Button>
         </div>
       </div>
 
@@ -396,6 +393,9 @@ export default function GroupsPage() {
               <Link href="/groups/import">
                 <FileSpreadsheet className="mr-2 h-4 w-4" />Import
               </Link>
+            </Button>
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="h-4 w-4" /> Add
             </Button>
           </div>
         </div>
