@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // Custom Components
-import { TableProjects } from "@/components/projects/table-projects"
+import { ProjectsTable } from "@/components/projects/projects-table"
 import ManageProjectDialog from "@/components/projects/dialogs/manage-project-dialog"
 import TransferProjectDialog from "@/components/projects/dialogs/transfer-project"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
@@ -202,7 +202,7 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        <TableProjects
+        <ProjectsTable
           isLoading={isLoading}
           fetchError={fetchError}
           data={paginated}

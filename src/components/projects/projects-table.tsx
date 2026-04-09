@@ -16,26 +16,38 @@ import {
 } from "@/components/ui/tooltip"
 import { ProjectRow } from "@/app/projects/page"
 
-// ─── Sub-components & Helpers (Keep Original Style) ─────────────────────────
-
 const PriorityBadge = ({ priority }: { priority: string | null }) => {
   const colors: Record<string, string> = {
-    high: "bg-red-100 text-red-700 border-red-200",
-    medium: "bg-amber-100 text-amber-700 border-amber-200",
-    low: "bg-blue-100 text-blue-700 border-blue-200",
+    high: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   }
+  
   return (
-    <Badge variant="outline" className={`capitalize font-normal ${priority ? colors[priority] : ""}`}>
+    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${priority ? colors[priority] : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
       {priority || "None"}
-    </Badge>
+    </span>
   )
 }
 
-const StatusBadge = ({ status }: { status: string }) => (
-  <Badge variant="secondary" className="capitalize font-normal bg-slate-100 text-slate-700">
-    {status.replace("_", " ")}
-  </Badge>
-)
+const StatusBadge = ({ status }: { status: string }) => {
+  const isActive = status.toLowerCase() === "active"
+
+  if (isActive) {
+    return (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-600 dark:bg-green-600 text-white capitalize">
+        {status.replace("_", " ")}
+      </span>
+    )
+  }
+
+  // Fallback for inactive, archived, on_hold
+  return (
+    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-200 capitalize">
+      {status.replace("_", " ")}
+    </span>
+  )
+}
 
 const SortIcon = ({ field, current, dir }: { field: string; current: string; dir: string }) => {
   if (field !== current) return null
@@ -66,7 +78,7 @@ interface TableProjectsProps {
   onTransfer: (p: ProjectRow) => void
 }
 
-export function TableProjects(props: TableProjectsProps) {
+export function ProjectsTable(props: TableProjectsProps) {
   const {
     isLoading, fetchError, data, selectedIds, allSelected,
     isAdmin, sortField, sortDir, activeFilterCount,
