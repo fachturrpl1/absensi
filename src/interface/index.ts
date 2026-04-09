@@ -177,6 +177,24 @@ export interface ITeams {
     metadata?: string;
 }
 
+export interface ITeamMember {
+  id: number;
+  team_id: number;
+  organization_member_id: number;
+  role: string;
+  is_primary_team: boolean;
+  joined_at: string;
+  organization_members: {
+    id: number;
+    is_active: boolean;
+    user: {
+      name: string;
+      profile_photo_url: string | null;
+      email: string;
+    }
+  }
+}
+
 // ── Domain types (used throughout the app) ───────────────────────────────────
 
 export interface IProjectTeamMemberUser {
