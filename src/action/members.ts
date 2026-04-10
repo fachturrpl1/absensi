@@ -996,6 +996,8 @@ export const updateMemberInfo = async (
     mobile?: string;
     mobile_code?: string;
     date_of_birth?: string;
+    home_location?: string;
+    personal_email?: string;
   }
 ) => {
   const adminClient = createAdminClient();
