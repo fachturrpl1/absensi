@@ -730,21 +730,41 @@ export async function createManualAttendance(payload: ManualAttendancePayload) {
       overtime_minutes: null as number | null,
     };
 
+    let finalStatus = payload.status;
+
     if (rule) {
-      const result = calculateAttendanceStatus(payload.actual_check_in, payload.actual_check_out || null, rule);
+      // Extract HH:mm from ISO strings if they are timestamps
+      const extractTime = (iso: string | null) => {
+        if (!iso) return null;
+        if (iso.includes("T")) {
+          const parts = iso.split("T")[1]?.split(":");
+          if (parts && parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+        }
+        return iso; // already HH:mm or HH:mm:ss
+      };
+
+      const checkInTime = extractTime(payload.actual_check_in);
+      const checkOutTime = extractTime(payload.actual_check_out);
+
+      const result = calculateAttendanceStatus(checkInTime, checkOutTime || null, rule);
       if (result.details) {
         computedDetails.late_minutes = result.details.lateMinutes ?? null;
         computedDetails.early_leave_minutes = result.details.earlyLeaveMinutes ?? null;
         computedDetails.overtime_minutes = result.details.overtimeMinutes ?? null;
       }
-      attendanceLogger.debug("📊 Computed details from schedule:", computedDetails);
+      
+      // Use the calculated status (e.g., 'late' instead of just 'present')
+      if (result.status && result.status !== 'absent') {
+        finalStatus = result.status;
+      }
+      
+      attendanceLogger.debug("📊 Computed details from schedule:", { ...computedDetails, status: finalStatus });
     }
 
     const insertPayload = {
       ...payload,
       ...computedDetails,
-      // Use the status provided from the client payload (which might have been auto-set by UI)
-      status: payload.status,
+      status: finalStatus,
     };
 
     const { error } = await supabase.from("attendance_records").insert([insertPayload]);
