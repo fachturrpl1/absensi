@@ -12,6 +12,15 @@ interface TeamMembersTableProps {
   isLoading?: boolean
 }
 
+// FIX: user_profiles tidak punya kolom "name"
+// Priority: display_name → first_name + last_name → "Unknown"
+function getDisplayName(user: ITeamMember["organization_members"]["user"]): string {
+  if (!user) return "Unknown"
+  if (user.display_name) return user.display_name
+  const full = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+  return full || "Unknown"
+}
+
 export function TeamMembersTable({ members, isLoading }: TeamMembersTableProps) {
   return (
     <div className="rounded-md border bg-card">
@@ -40,19 +49,19 @@ export function TeamMembersTable({ members, isLoading }: TeamMembersTableProps) 
             </TableRow>
           ) : (
             members.map((m) => {
-              const userName = m.organization_members?.user?.name || "Unknown";
-              const userEmail = m.organization_members?.user?.email || "";
-              const userPhoto = m.organization_members?.user?.profile_photo_url || null;
-              // Mengambil data position dari alias 'positions_detail' di server action
-              const positionTitle = m.positions_detail?.title || "No Position";
+              const user = m.organization_members?.user ?? null
+              const userName = getDisplayName(user)
+              const userEmail = user?.email || ""
+              const userPhoto = user?.profile_photo_url || null
+              const positionTitle = m.positions_detail?.title || "No Position"
 
               return (
                 <TableRow key={m.id} className="group transition-colors">
                   <TableCell className="px-4 py-3">
-                    <UserAvatar 
-                      name={userName} 
-                      photoUrl={userPhoto} 
-                      className="h-8 w-8 text-[10px]" 
+                    <UserAvatar
+                      name={userName}
+                      photoUrl={userPhoto}
+                      className="h-8 w-8 text-[10px]"
                     />
                   </TableCell>
                   <TableCell>
@@ -62,8 +71,8 @@ export function TeamMembersTable({ members, isLoading }: TeamMembersTableProps) 
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className="font-normal capitalize bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50"
                     >
                       {positionTitle}
@@ -82,7 +91,7 @@ export function TeamMembersTable({ members, isLoading }: TeamMembersTableProps) 
                     {m.joined_at ? format(new Date(m.joined_at), "MMM dd, yyyy") : "-"}
                   </TableCell>
                 </TableRow>
-              );
+              )
             })
           )}
         </TableBody>

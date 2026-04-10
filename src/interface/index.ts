@@ -177,21 +177,25 @@ export interface ITeams {
     metadata?: string;
 }
 
+// Ganti ITeamMember yang lama dengan ini di @/interface/index.ts
+
 export interface ITeamMember {
   id: number;
   team_id: number;
   organization_member_id: number;
-  positions: number | null; // Sudah diperbaiki dari postions
+  positions: number | null;
   is_primary_team: boolean;
   joined_at: string;
   organization_members: {
     id: number;
     is_active: boolean;
     user: {
-      name: string;
+      first_name: string | null;
+      last_name: string | null;
+      display_name: string | null;
       profile_photo_url: string | null;
-      email: string;
-    }
+      email: string | null;
+    } | null;
   };
   positions_detail?: {
     id: number;

@@ -4,20 +4,13 @@ import { createClient } from "@/utils/supabase/server";
 import { ITeams, ITeamMember } from "@/interface";
 
 // ─── GET TEAMS ──────────────────────────────────────────────────────────────
-// FIX: includeInactive default diubah ke true agar filter di client side bisa
-// menampilkan semua data (active & inactive). Page yg butuh active saja bisa
-// pass includeInactive: false secara eksplisit.
 export const getTeams = async (
   organizationId?: number,
   includeInactive: boolean = true
 ) => {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in", data: [] as ITeams[] };
   }
@@ -32,20 +25,14 @@ export const getTeams = async (
       .maybeSingle();
 
     if (!member) {
-      return {
-        success: true,
-        message: "User not in any organization",
-        data: [] as ITeams[],
-      };
+      return { success: true, message: "User not in any organization", data: [] as ITeams[] };
     }
     targetOrgId = member.organization_id;
   }
 
   let query = supabase
     .from("teams")
-    .select(
-      "id, organization_id, code, name, description, is_active, created_at, updated_at, settings, metadata"
-    )
+    .select("id, organization_id, code, name, description, is_active, created_at, updated_at, settings, metadata")
     .eq("organization_id", targetOrgId);
 
   if (!includeInactive) {
@@ -63,78 +50,46 @@ export const getTeams = async (
 };
 
 // ─── GET TEAM BY SLUG ───────────────────────────────────────────────────────
-// Coba match by `code` dulu, fallback ke `id` jika slug adalah angka.
 export const getTeamBySlug = async (slug: string) => {
   const supabase = await createClient();
 
-  // Coba match by code terlebih dahulu
   const { data: byCode, error: codeError } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("code", slug)
-    .maybeSingle();
+    .from("teams").select("*").eq("code", slug).maybeSingle();
+  if (codeError) return { success: false, message: codeError.message, data: null };
+  if (byCode) return { success: true, data: byCode as ITeams };
 
-  if (codeError) {
-    console.error("getTeamBySlug (by code) error:", codeError);
-    return { success: false, message: codeError.message, data: null };
-  }
-
-  if (byCode) {
-    return { success: true, data: byCode as ITeams };
-  }
-
-  // Fallback: coba match by name
   const { data: byName, error: nameError } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("name", slug)
-    .maybeSingle();
+    .from("teams").select("*").eq("name", slug).maybeSingle();
+  if (nameError) return { success: false, message: nameError.message, data: null };
+  if (byName) return { success: true, data: byName as ITeams };
 
-  if (nameError) {
-    console.error("getTeamBySlug (by name) error:", nameError);
-    return { success: false, message: nameError.message, data: null };
-  }
-
-  if (byName) {
-    return { success: true, data: byName as ITeams };
-  }
-
-  // Fallback terakhir: coba match by id (jika slug adalah angka)
   const numericId = Number(slug);
   if (!isNaN(numericId)) {
     const { data: byId, error: idError } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("id", numericId)
-      .maybeSingle();
-
-    if (idError) {
-      console.error("getTeamBySlug (by id) error:", idError);
-      return { success: false, message: idError.message, data: null };
-    }
-
-    if (byId) {
-      return { success: true, data: byId as ITeams };
-    }
+      .from("teams").select("*").eq("id", numericId).maybeSingle();
+    if (idError) return { success: false, message: idError.message, data: null };
+    if (byId) return { success: true, data: byId as ITeams };
   }
 
   return { success: false, message: "Team not found", data: null };
 };
 
 // ─── GET TEAM MEMBERS ───────────────────────────────────────────────────────
+// FIX: Kolom user_profiles tidak punya "name", pakai first_name + last_name + display_name
 export const getTeamMembers = async (teamId: number) => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("team_members")
-    .select(
-      `
+    .select(`
       *,
       organization_members (
         id,
         is_active,
-        user:users (
-          name,
+        user:user_profiles (
+          first_name,
+          last_name,
+          display_name,
           profile_photo_url,
           email
         )
@@ -143,8 +98,7 @@ export const getTeamMembers = async (teamId: number) => {
         id,
         title
       )
-    `
-    )
+    `)
     .eq("team_id", teamId);
 
   if (error) {
@@ -159,28 +113,22 @@ export const getTeamMembers = async (teamId: number) => {
 export const createTeam = async (payload: Partial<ITeams>) => {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in" };
   }
 
   const { data, error } = await supabase
     .from("teams")
-    .insert([
-      {
-        organization_id: payload.organization_id,
-        code: payload.code || null,
-        name: payload.name,
-        description: payload.description || null,
-        is_active: payload.is_active ?? true,
-        settings: payload.settings || null,
-        metadata: payload.metadata || null,
-      },
-    ])
+    .insert([{
+      organization_id: payload.organization_id,
+      code: null, // auto-generated by database trigger
+      name: payload.name,
+      description: payload.description || null,
+      is_active: payload.is_active ?? true,
+      settings: payload.settings || null,
+      metadata: payload.metadata || null,
+    }])
     .select()
     .single();
 
@@ -196,11 +144,7 @@ export const createTeam = async (payload: Partial<ITeams>) => {
 export const updateTeam = async (id: number, payload: Partial<ITeams>) => {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in" };
   }
@@ -208,12 +152,10 @@ export const updateTeam = async (id: number, payload: Partial<ITeams>) => {
   const { data, error } = await supabase
     .from("teams")
     .update({
-      code: payload.code || null,
       name: payload.name,
       description: payload.description || null,
       is_active: payload.is_active,
-      settings: payload.settings || null,
-      metadata: payload.metadata || null,
+      // code tidak di-update, settings & metadata dipertahankan
     })
     .eq("id", id)
     .select()
@@ -231,11 +173,7 @@ export const updateTeam = async (id: number, payload: Partial<ITeams>) => {
 export const deleteTeam = async (id: number) => {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { success: false, message: "User not logged in" };
   }
