@@ -33,6 +33,8 @@ export interface IUser {
     dusun?: string;
     kelurahan?: string;
     kecamatan?: string;
+    home_location?: string | null;
+    personal_email?: string | null;
     profile_photo_url?: string | null;
     emergency_contact?: IEmergencyContact | null;
     is_active?: boolean;

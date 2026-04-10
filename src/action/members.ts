@@ -88,7 +88,9 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         last_name,
         display_name,
         phone,
+        phone_code,
         mobile,
+        mobile_code,
         date_of_birth,
         jenis_kelamin,
         nik,
@@ -101,6 +103,8 @@ export const getAllOrganization_member = async (organizationId?: number) => {
         dusun,
         kelurahan,
         kecamatan,
+        home_location,
+        personal_email,
         profile_photo_url,
         search_name,
         is_active
@@ -546,7 +550,7 @@ export const getOrganizationMembersById = async (id: string) => {
         // select common profile fields including email explicitly
         const { data: userData, error: userError } = await supabase
           .from("user_profiles")
-          .select("id, employee_code, nik, first_name, last_name, display_name, phone, mobile, date_of_birth, profile_photo_url, email, is_active, created_at, updated_at, deleted_at, jalan, rt, rw, dusun, kelurahan, kecamatan")
+          .select("id, employee_code, nik, first_name, last_name, display_name, phone, phone_code, mobile, mobile_code, date_of_birth, profile_photo_url, email, personal_email, home_location, is_active, created_at, updated_at, deleted_at, jalan, rt, rw, dusun, kelurahan, kecamatan")
           .eq("id", member.user_id)
           .maybeSingle()
 

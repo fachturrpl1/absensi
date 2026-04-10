@@ -285,6 +285,8 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
     dob_day: "",
     dob_month: "",
     dob_year: "",
+    home_location: "",
+    personal_email: "",
   })
 
   // Form state - Employment tab
@@ -392,6 +394,8 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
             dob_day: dobDay,
             dob_month: dobMonth,
             dob_year: dobYear,
+            home_location: u?.home_location || "",
+            personal_email: u?.personal_email || "",
           }))
 
           setEmploymentData({
@@ -491,9 +495,29 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           phone_code: formData.phone_code || undefined,
           mobile: formData.mobile || undefined,
           mobile_code: formData.mobile_code || undefined,
+          home_location: formData.home_location || undefined,
+          personal_email: formData.personal_email || undefined,
           date_of_birth,
         })
-        if (res.success) toast.success("Info saved successfully")
+
+        // Also update work_location in organization_members since it's in the Contact section
+        await updateMemberEmployment(member.id, {
+          work_location: employmentData.work_location || null
+        })
+        if (res.success) {
+          toast.success("Info saved successfully")
+          // Update local updated_at to reflect the save time
+          setMember(prev => {
+            if (!prev || !prev.user) return prev;
+            return {
+              ...prev,
+              user: {
+                ...prev.user,
+                updated_at: new Date().toISOString()
+              }
+            };
+          });
+        }
         else toast.error(res.message || "Failed to save info")
       } else if (activeTab === "employment") {
         const res = await updateMemberEmployment(member.id, {
@@ -721,7 +745,17 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <Input defaultValue="Wed, Apr 1, 2026" disabled className="bg-slate-50 border-slate-200 text-slate-500" />
+                  <Input 
+                    value={member?.user?.updated_at ? new Date(member.user.updated_at).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    }) : "-"} 
+                    readOnly 
+                    disabled 
+                    className="bg-slate-50 border-slate-200 text-slate-500 cursor-not-allowed" 
+                  />
                 </div>
               </div>
 
@@ -732,29 +766,39 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
             <div className="space-y-6 pt-6">
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <h2 className="text-lg font-medium text-slate-800">Contact</h2>
-                <button className="text-sm text-primary font-medium hover:underline">Edit work address</button>
               </div>
 
               <div className="grid gap-12 md:grid-cols-2">
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK ADDRESS</Label>
-                      <Info className="h-3 w-3 text-muted-foreground" />
+                    <div className="flex items-center justify-between h-5">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK ADDRESS</Label>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </div>
                     </div>
-                    <Input placeholder="No address" className="h-11 border-slate-200 bg-slate-50" />
+                    <Input 
+                      placeholder="No address" 
+                      className="h-11 border-slate-200"
+                      value={employmentData.work_location}
+                      onChange={(e) => setEmploymentData(prev => ({ ...prev, work_location: e.target.value }))}
+                    />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK EMAIL</Label>
-                      <Info className="h-3 w-3 text-muted-foreground" />
+                    <div className="flex items-center justify-between h-5">
+                      <div className="flex items-center gap-1">
+                        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK EMAIL</Label>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </div>
                     </div>
-                    <Input defaultValue={email} className="h-11 border-slate-200 bg-slate-50 text-slate-500" disabled />
+                    <Input defaultValue={email} className="h-11 border-slate-200 text-slate-500 bg-white" disabled />
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK PHONE</Label>
+                    <div className="flex items-center justify-between h-5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">WORK PHONE</Label>
+                    </div>
                     <div className="flex items-center gap-3">
                       <DropdownMenu open={phoneOpen} onOpenChange={setPhoneOpen}>
                         <DropdownMenuTrigger asChild>
@@ -819,23 +863,36 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
                 <div className="space-y-8">
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between h-5">
                       <div className="flex items-center gap-1">
                         <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">HOME ADDRESS</Label>
                         <Info className="h-3 w-3 text-muted-foreground" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border rounded border-slate-200"></div>
-                        <span className="text-xs text-slate-400">Mailing address</span>
-                      </div>
                     </div>
-                    <Input placeholder="Search for an address" className="h-11 border-slate-200" />
+                    <Input 
+                      placeholder="Search for an address" 
+                      className="h-11 border-slate-200" 
+                      value={formData.home_location}
+                      onChange={(e) => setFormData(prev => ({ ...prev, home_location: e.target.value }))}
+                    />
                   </div>
 
-                  <FormField label="PERSONAL EMAIL" placeholder="name@example.com" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between h-5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PERSONAL EMAIL</Label>
+                    </div>
+                    <Input 
+                      placeholder="name@example.com" 
+                      className="h-11 border-slate-200"
+                      value={formData.personal_email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, personal_email: e.target.value }))}
+                    />
+                  </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PERSONAL PHONE (MOBILE)</Label>
+                    <div className="flex items-center justify-between h-5">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PERSONAL PHONE (MOBILE)</Label>
+                    </div>
                     <div className="flex items-center gap-3">
                       <DropdownMenu open={mobileOpen} onOpenChange={setMobileOpen}>
                         <DropdownMenuTrigger asChild>
@@ -899,13 +956,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
 
-              <div className="pt-10 flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-medium text-slate-700">Custom fields</span>
-                  <Info className="h-3 w-3 text-slate-400" />
-                </div>
-                <button className="text-sm text-primary font-medium hover:underline">Manage custom fields</button>
-              </div>
             </div>
           </div>
         )}
