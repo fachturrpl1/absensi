@@ -3,7 +3,7 @@
 import React from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Plus, Search, Users as TeamIcon } from "lucide-react"
-import { useForm } from "react-hook-form"
+import { useForm, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
@@ -19,7 +19,7 @@ import { TableSkeleton, groupsColumns as teamsSkeletonColumns } from "@/componen
 
 import { TeamsTable } from "@/components/teams/teams-table"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
-import { TeamFormDialog, TeamForm, teamSchema } from "@/components/teams/dialogs/form-dialog"
+import { TeamFormDialog, TeamForm, teamSchema } from "@/components/teams/dialogs/teams-form-dialog"
 import { TeamDeleteDialog } from "@/components/teams/dialogs/delete-dialog"
 
 export default function TeamsPage() {
@@ -38,8 +38,10 @@ export default function TeamsPage() {
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deleteTarget, setDeleteTarget] = React.useState<ITeams | null>(null)
 
-  const form = useForm<TeamForm>({
-    resolver: zodResolver(teamSchema),
+  // FIX: Generic ketiga <TeamForm, unknown, TeamForm> + cast resolver
+  // z.coerce menghasilkan type `unknown` di TypeScript, cast ini memperbaikinya
+  const form = useForm<TeamForm, unknown, TeamForm>({
+    resolver: zodResolver(teamSchema) as Resolver<TeamForm>,
     defaultValues: {
       organization_id: 0,
       code: "",
@@ -57,7 +59,7 @@ export default function TeamsPage() {
       setLoading(true)
       const result = await getTeams(Number(organizationId))
       if (result.success) setTeams(result.data)
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch teams")
     } finally {
       setLoading(false)
@@ -68,18 +70,15 @@ export default function TeamsPage() {
     if (isHydrated && organizationId) fetchTeamsData()
   }, [isHydrated, organizationId, fetchTeamsData])
 
-  // Reset page to 1 when search or status filter changes
   React.useEffect(() => {
     setCurrentPage(1)
   }, [searchQuery, statusFilter])
 
   const handleSubmit = async (values: TeamForm) => {
-    // Validasi tambahan sebelum kirim
     if (values.organization_id === 0) {
       toast.error("Invalid Organization ID")
       return
     }
-
     try {
       const res = editingTeam
         ? await updateTeam(editingTeam.id, values)
@@ -93,8 +92,8 @@ export default function TeamsPage() {
       } else {
         throw new Error(res.message)
       }
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "An error occurred")
     }
   }
 
@@ -110,8 +109,8 @@ export default function TeamsPage() {
       } else {
         throw new Error(res.message)
       }
-    } catch (err: any) {
-      toast.error(err.message || "An error occurred")
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "An error occurred")
     }
   }
 
@@ -138,16 +137,26 @@ export default function TeamsPage() {
     setModalOpen(true)
   }
 
-  // Filter & Pagination Logic
   const filteredTeams = teams.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || (t.code?.toLowerCase().includes(searchQuery.toLowerCase()))
-    const matchesStatus = statusFilter === "all" ? true : statusFilter === "active" ? t.is_active : !t.is_active
+    const matchesSearch =
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.code?.toLowerCase().includes(searchQuery.toLowerCase()))
+    const matchesStatus =
+      statusFilter === "all" ? true :
+      statusFilter === "active" ? t.is_active : !t.is_active
     return matchesSearch && matchesStatus
   })
 
-  const paginatedTeams = filteredTeams.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedTeams = filteredTeams.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
 
-  if (!isHydrated) return <div className="p-4"><TableSkeleton rows={6} columns={teamsSkeletonColumns} /></div>
+  if (!isHydrated) return (
+    <div className="p-4">
+      <TableSkeleton rows={6} columns={teamsSkeletonColumns} />
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-4 p-4 pt-0">
@@ -174,7 +183,9 @@ export default function TeamsPage() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          <Button size="sm" onClick={openAdd}>
+            <Plus className="w-4 h-4 mr-1" /> Add
+          </Button>
         </div>
       </div>
 
@@ -189,7 +200,12 @@ export default function TeamsPage() {
         </Empty>
       ) : (
         <>
-          <TeamsTable data={paginatedTeams} organizationId={organizationId} onEdit={openEdit} onDelete={(t) => { setDeleteTarget(t); setDeleteOpen(true); }} />
+          <TeamsTable
+            data={paginatedTeams}
+            organizationId={organizationId}
+            onEdit={openEdit}
+            onDelete={(t) => { setDeleteTarget(t); setDeleteOpen(true) }}
+          />
           <PaginationFooter
             page={currentPage}
             totalPages={Math.ceil(filteredTeams.length / pageSize)}

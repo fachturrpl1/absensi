@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 
 export const teamSchema = z.object({
-  organization_id: z.number().min(1, "Organization ID is required"),
+  organization_id: z.coerce.number().min(1, "Organization ID is required"),
   code: z.string().optional().or(z.literal("")),
   name: z.string().min(1, "Team name is required"),
   description: z.string().optional().or(z.literal("")),
@@ -40,8 +40,8 @@ interface TeamFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   editingId: number | string | null
-  form: UseFormReturn<TeamForm>
-  onSubmit: (values: TeamForm) => void
+  form: UseFormReturn<TeamForm, unknown, TeamForm>
+  onSubmit: (values: TeamForm) => Promise<void>
   organizationId: string | number | null | undefined
 }
 
@@ -55,12 +55,35 @@ export function TeamFormDialog({
 }: TeamFormDialogProps) {
   const isEditing = !!editingId
 
-  // Pastikan ID organisasi masuk ke form state saat modal dibuka
+  // DEBUG SEMENTARA - hapus setelah fix
+  React.useEffect(() => {
+    console.log("form errors:", form.formState.errors)
+    console.log("form values:", form.getValues())
+  }, [form.formState.errors])
+
+  // Pastikan organization_id terisi saat modal buka
+  // form.reset() di openAdd/openEdit sudah set ini, useEffect ini safety fallback
   React.useEffect(() => {
     if (open && organizationId) {
-      form.setValue("organization_id", Number(organizationId))
+      const current = form.getValues("organization_id")
+      if (!current || current === 0) {
+        form.setValue("organization_id", Number(organizationId), {
+          shouldValidate: false,
+          shouldDirty: false,
+        })
+      }
     }
   }, [open, organizationId, form])
+
+  // Wrapper submit: inject organization_id langsung ke values sebelum kirim
+  // Ini memastikan organization_id selalu terisi meski hidden input tidak ada
+  const handleSubmit = (values: TeamForm) => {
+    const finalValues: TeamForm = {
+      ...values,
+      organization_id: values.organization_id || Number(organizationId) || 0,
+    }
+    return onSubmit(finalValues)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,20 +96,23 @@ export function TeamFormDialog({
         </DialogHeader>
 
         <Form {...form}>
+          {/*
+            TIDAK ada hidden input untuk organization_id.
+            Hidden input menyebabkan react-hook-form kehilangan track field
+            karena HTML input selalu return string, bukan number,
+            sehingga z.coerce.number().min(1) gagal diam-diam dan
+            handleSubmit tidak pernah memanggil onSubmit.
+            
+            organization_id di-set via:
+            1. form.reset() di openAdd/openEdit (page.tsx) — jalur utama
+            2. useEffect setValue di atas — safety fallback
+            3. handleSubmit wrapper di atas — last resort
+          */}
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-4 pt-4"
             noValidate
           >
-            {/* Hidden field agar validasi organization_id (number) terpenuhi */}
-            <FormField
-              control={form.control}
-              name="organization_id"
-              render={({ field }) => (
-                <input type="hidden" {...field} value={field.value || ""} />
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -123,7 +149,11 @@ export function TeamFormDialog({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Team description..." className="resize-none" {...field} />
+                    <Textarea
+                      placeholder="Team description..."
+                      className="resize-none"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -139,18 +169,30 @@ export function TeamFormDialog({
                     <FormLabel>Active Status</FormLabel>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
             />
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={form.formState.isSubmitting}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Saving..." : isEditing ? "Save changes" : "Create team"}
+                {form.formState.isSubmitting
+                  ? "Saving..."
+                  : isEditing
+                  ? "Save changes"
+                  : "Create team"}
               </Button>
             </DialogFooter>
           </form>
