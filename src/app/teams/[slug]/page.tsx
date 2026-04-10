@@ -23,13 +23,20 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import Link from "next/link"
 
+// FIX: user_profiles tidak punya kolom "name"
+// Helper ini konsisten dengan getDisplayName di team-members-table.tsx
+function getMemberName(user: ITeamMember["organization_members"]["user"]): string {
+  if (!user) return ""
+  if (user.display_name) return user.display_name
+  return `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
+}
+
 export default function TeamMembersPage() {
   const params = useParams()
   const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
   const slug = decodeURIComponent(params.slug as string)
 
-  // ── Local state ──────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(10)
@@ -52,8 +59,6 @@ export default function TeamMembersPage() {
   const teamName = team?.name ?? slug
 
   // ── Fetch members ────────────────────────────────────────────────────────────
-  // FIX: getTeamMembers sekarang selalu return { data: [] } saat error,
-  // sehingga .data ?? [] tidak akan undefined
   const {
     data: membersResult,
     isLoading: membersLoading,
@@ -72,7 +77,6 @@ export default function TeamMembersPage() {
     staleTime: 60_000,
   })
 
-  // FIX: Gunakan membersResult?.data bukan membersData?.data
   const allMembers: ITeamMember[] = membersResult?.data ?? []
 
   // ── Filter ───────────────────────────────────────────────────────────────────
@@ -81,10 +85,11 @@ export default function TeamMembersPage() {
 
     const s = debouncedSearch.toLowerCase().trim()
     return allMembers.filter((m: ITeamMember) => {
-      const name = (m.organization_members?.user?.name || "").toLowerCase()
+      // FIX: gunakan getMemberName helper, bukan user.name yang tidak ada
+      const name = getMemberName(m.organization_members?.user).toLowerCase()
       const email = (m.organization_members?.user?.email || "").toLowerCase()
-      const role = (m.positions_detail?.title || "").toLowerCase()
-      return name.includes(s) || email.includes(s) || role.includes(s)
+      const position = (m.positions_detail?.title || "").toLowerCase()
+      return name.includes(s) || email.includes(s) || position.includes(s)
     })
   }, [allMembers, debouncedSearch])
 
@@ -106,7 +111,6 @@ export default function TeamMembersPage() {
     }
   }, [queryClient, teamId, refetch])
 
-  // ── Loading state ────────────────────────────────────────────────────────────
   if (!isHydrated || teamLoading) {
     return (
       <div className="flex flex-col gap-4 p-4 pt-0 mt-6">
@@ -116,7 +120,6 @@ export default function TeamMembersPage() {
     )
   }
 
-  // ── Team not found ───────────────────────────────────────────────────────────
   if (!team) {
     return (
       <div className="flex flex-col gap-4 p-4 pt-0">
@@ -155,7 +158,6 @@ export default function TeamMembersPage() {
         <h1 className="text-xl font-semibold">{teamName} — Members</h1>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
@@ -191,7 +193,6 @@ export default function TeamMembersPage() {
         </Button>
       </div>
 
-      {/* Content */}
       <div className="min-h-[400px]">
         {membersLoading ? (
           <TableSkeleton rows={8} columns={membersColumns} />

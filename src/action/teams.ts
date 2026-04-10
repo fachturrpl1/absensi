@@ -75,25 +75,22 @@ export const getTeamBySlug = async (slug: string) => {
 };
 
 // ─── GET TEAM MEMBERS ───────────────────────────────────────────────────────
-// FIX: Kolom user_profiles tidak punya "name", pakai first_name + last_name + display_name
+// Menggunakan multi-step query manual karena Supabase nested join
+// untuk user_profiles via organization_members tidak reliable
+// tanpa mengetahui nama FK constraint yang tepat.
 export const getTeamMembers = async (teamId: number) => {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Step 1: Fetch team_members + positions
+  const { data: teamMembers, error: tmError } = await supabase
     .from("team_members")
     .select(`
-      *,
-      organization_members (
-        id,
-        is_active,
-        user:user_profiles (
-          first_name,
-          last_name,
-          display_name,
-          profile_photo_url,
-          email
-        )
-      ),
+      id,
+      team_id,
+      organization_member_id,
+      is_primary_team,
+      joined_at,
+      positions,
       positions_detail:positions (
         id,
         title
@@ -101,12 +98,76 @@ export const getTeamMembers = async (teamId: number) => {
     `)
     .eq("team_id", teamId);
 
-  if (error) {
-    console.error("getTeamMembers error:", error);
-    return { success: false, message: error.message, data: [] as ITeamMember[] };
+  if (tmError) {
+    console.error("getTeamMembers step1 error:", tmError);
+    return { success: false, message: tmError.message, data: [] as ITeamMember[] };
   }
 
-  return { success: true, data: data as unknown as ITeamMember[] };
+  if (!teamMembers || teamMembers.length === 0) {
+    return { success: true, data: [] as ITeamMember[] };
+  }
+
+  // Step 2: Fetch organization_members untuk semua member_id
+  const memberIds = teamMembers.map((tm) => tm.organization_member_id)
+
+  const { data: orgMembers, error: omError } = await supabase
+    .from("organization_members")
+    .select("id, user_id, is_active")
+    .in("id", memberIds);
+
+  if (omError) {
+    console.error("getTeamMembers step2 error:", omError);
+    return { success: false, message: omError.message, data: [] as ITeamMember[] };
+  }
+
+  // Step 3: Fetch user_profiles untuk semua user_id
+  const userIds = (orgMembers ?? []).map((om) => om.user_id).filter(Boolean)
+
+  const { data: userProfiles, error: upError } = await supabase
+    .from("user_profiles")
+    .select("id, first_name, last_name, display_name, profile_photo_url, email")
+    .in("id", userIds);
+
+  if (upError) {
+    console.error("getTeamMembers step3 error:", upError);
+    return { success: false, message: upError.message, data: [] as ITeamMember[] };
+  }
+
+  // Step 4: Gabungkan semua data
+  const orgMemberMap = new Map((orgMembers ?? []).map((om) => [om.id, om]))
+  const userProfileMap = new Map((userProfiles ?? []).map((up) => [up.id, up]))
+
+  const mapped: ITeamMember[] = (teamMembers ?? []).map((tm: any) => {
+    const orgMember = orgMemberMap.get(tm.organization_member_id) ?? null
+    const userProfile = orgMember ? (userProfileMap.get(orgMember.user_id) ?? null) : null
+
+    return {
+      id: tm.id,
+      team_id: tm.team_id,
+      organization_member_id: tm.organization_member_id,
+      is_primary_team: tm.is_primary_team ?? false,
+      joined_at: tm.joined_at,
+      positions: tm.positions ?? null,
+      positions_detail: tm.positions_detail ?? null,
+      organization_members: orgMember
+        ? {
+            id: orgMember.id,
+            is_active: orgMember.is_active,
+            user: userProfile
+              ? {
+                  first_name: userProfile.first_name ?? null,
+                  last_name: userProfile.last_name ?? null,
+                  display_name: userProfile.display_name ?? null,
+                  profile_photo_url: userProfile.profile_photo_url ?? null,
+                  email: userProfile.email ?? null,
+                }
+              : null,
+          }
+        : { id: 0, is_active: false, user: null },
+    }
+  })
+
+  return { success: true, data: mapped };
 };
 
 // ─── CREATE TEAM ────────────────────────────────────────────────────────────
@@ -155,7 +216,6 @@ export const updateTeam = async (id: number, payload: Partial<ITeams>) => {
       name: payload.name,
       description: payload.description || null,
       is_active: payload.is_active,
-      // code tidak di-update, settings & metadata dipertahankan
     })
     .eq("id", id)
     .select()
