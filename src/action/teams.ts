@@ -53,21 +53,39 @@ export const getTeams = async (
 export const getTeamBySlug = async (slug: string) => {
   const supabase = await createClient();
 
-  const { data: byCode, error: codeError } = await supabase
-    .from("teams").select("*").eq("code", slug).maybeSingle();
-  if (codeError) return { success: false, message: codeError.message, data: null };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, message: "User not logged in", data: null };
+
+  // Ambil org_id user
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const orgId = member?.organization_id;
+
+  let query = supabase.from("teams").select("*");
+  if (orgId) {
+    query = query.eq("organization_id", orgId);
+  }
+
+  // Coba cari berdasarkan code
+  const { data: byCode, error: codeError } = await query.eq("code", slug).maybeSingle();
   if (byCode) return { success: true, data: byCode as ITeams };
 
-  const { data: byName, error: nameError } = await supabase
-    .from("teams").select("*").eq("name", slug).maybeSingle();
-  if (nameError) return { success: false, message: nameError.message, data: null };
+  // Coba cari berdasarkan name
+  const { data: byName } = await supabase.from("teams").select("*")
+    .eq("organization_id", orgId)
+    .eq("name", slug).maybeSingle();
   if (byName) return { success: true, data: byName as ITeams };
 
+  // Coba cari berdasarkan ID jika slug berupa angka
   const numericId = Number(slug);
   if (!isNaN(numericId)) {
-    const { data: byId, error: idError } = await supabase
-      .from("teams").select("*").eq("id", numericId).maybeSingle();
-    if (idError) return { success: false, message: idError.message, data: null };
+    const { data: byId } = await supabase.from("teams").select("*")
+      .eq("organization_id", orgId)
+      .eq("id", numericId).maybeSingle();
     if (byId) return { success: true, data: byId as ITeams };
   }
 
@@ -81,7 +99,12 @@ export const getTeamBySlug = async (slug: string) => {
 export const getTeamMembers = async (teamId: number) => {
   const supabase = await createClient();
 
-  // Step 1: Fetch team_members + positions
+  if (!teamId || isNaN(teamId)) {
+    return { success: false, message: "Invalid Team ID", data: [] as ITeamMember[] };
+  }
+
+  // Step 1: Fetch team_members + positions detail
+  // Kita pisahkan penarikan kolom 'positions' (ID) dan alias joinnya
   const { data: teamMembers, error: tmError } = await supabase
     .from("team_members")
     .select(`
