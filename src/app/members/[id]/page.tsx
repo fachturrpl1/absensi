@@ -835,69 +835,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   <FormField label="PERSONAL EMAIL" placeholder="name@example.com" />
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">HOME PHONE / TELEPHONE</Label>
-                    <div className="flex items-center gap-3">
-                      <DropdownMenu open={phoneOpen} onOpenChange={setPhoneOpen}>
-                        <DropdownMenuTrigger asChild>
-                          <div className="flex items-center gap-2 h-11 px-3 border border-slate-200 rounded-md bg-white hover:bg-slate-50 cursor-pointer transition-all active:scale-[0.98]">
-                            <img
-                              src={`https://flagcdn.com/w20/${(allCountries.find(c => c.phone === formData.phone_code)?.code || "us").toLowerCase()}.png`}
-                              alt="Flag"
-                              className="h-3 w-5 object-cover"
-                              onError={(e) => { e.currentTarget.src = "https://flagcdn.com/w20/us.png" }}
-                            />
-                            <ChevronDown className="h-3 w-3 text-slate-400" />
-                            <span className="text-sm">+{formData.phone_code || "1"}</span>
-                          </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-[280px] p-0 shadow-xl border-slate-200">
-                          <div className="p-2 border-b bg-slate-50/50 sticky top-0 z-10">
-                            <div className="relative">
-                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                              <Input
-                                placeholder="Search country or code..."
-                                className="pl-9 h-9 text-xs border-slate-200 focus-visible:ring-slate-200"
-                                value={phoneSearch}
-                                onChange={(e) => setPhoneSearch(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          </div>
-                          <div className="max-h-[300px] overflow-y-auto py-1 custom-scrollbar">
-                            {allCountries
-                              .filter(c =>
-                                c.name.toLowerCase().includes(phoneSearch.toLowerCase()) ||
-                                c.phone.includes(phoneSearch)
-                              )
-                              .map((c) => (
-                                <DropdownMenuItem
-                                  key={c.code}
-                                  className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 focus:bg-slate-50"
-                                  onSelect={(e) => e.preventDefault()}
-                                  onClick={() => {
-                                    setFormData(prev => ({ ...prev, phone_code: c.phone }))
-                                    setPhoneSearch("")
-                                    setPhoneOpen(false)
-                                  }}
-                                >
-                                  <img src={`https://flagcdn.com/w20/${c.code.toLowerCase()}.png`} alt={c.name} className="h-3 w-5" />
-                                  <span className="flex-1 text-sm text-slate-700">{c.name}</span>
-                                  <span className="text-xs text-slate-400 font-medium">+{c.phone}</span>
-                                </DropdownMenuItem>
-                              ))}
-                          </div>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Input 
-                        placeholder="201-555-0123" 
-                        className="h-11 border-slate-200" 
-                        value={formData.phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PERSONAL PHONE (MOBILE)</Label>
                     <div className="flex items-center gap-3">
                       <DropdownMenu open={mobileOpen} onOpenChange={setMobileOpen}>
