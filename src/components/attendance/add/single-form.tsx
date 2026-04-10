@@ -451,7 +451,6 @@ export function SingleForm({
   return (
     <TabsContent value="single" asChild>
       <div className="flex gap-4 h-[600px] overflow-hidden mb-2 mt-2">
-
         <div className="hidden md:flex w-[280px] shrink-0 flex-col gap-3 h-full border-r pr-2 border-border pb-1 mt-2 mb-2">
           <div className="relative shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -680,7 +679,7 @@ export function SingleForm({
               )}
 
               {step === "checked_out" && (
-                <div className="flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/20 px-4 py-3 text-slate-700 dark:text-emerald-400 shrink-0">
+                <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50 px-4 py-3 text-slate-600 dark:text-slate-400 shrink-0">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="text-sm font-medium">Completed</span>
                 </div>
@@ -695,33 +694,33 @@ export function SingleForm({
             </div>
           )}
         </div>
-      </div>
 
-      <AlertDialog open={showLogDialog} onOpenChange={setShowLogDialog}>
-        <AlertDialogContent className="rounded-2xl border-2">
-          <AlertDialogHeader>
-            <div className="mx-auto bg-blue-50 dark:bg-blue-950/30 p-3 rounded-full mb-2">
-              <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <AlertDialogTitle className="text-center text-lg">
-              {logType === "check_in" ? "Check In Tercatat (Log)" : "Check Out Tercatat (Log)"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-sm">
-              {logType === "check_in" 
-                ? "Kehadiran Anda telah dicatat di log sistem karena masih di luar jam kerja. Silakan lakukan Check In kembali saat jam kerja dimulai untuk pencatatan resmi."
-                : "Kepulangan Anda telah dicatat di log sistem. Terima kasih atas kerja kerasnya hari ini."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction 
-              onClick={() => setShowLogDialog(false)}
-              className="w-full rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-semibold"
-            >
-              Mengerti
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={showLogDialog} onOpenChange={setShowLogDialog}>
+          <AlertDialogContent className="rounded-2xl border-2">
+            <AlertDialogHeader>
+              <div className="mx-auto bg-blue-50 dark:bg-blue-950/30 p-3 rounded-full mb-2">
+                <Clock className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <AlertDialogTitle className="text-center text-lg">
+                {logType === "check_in" ? "Check In Tercatat (Log)" : "Check Out Tercatat (Log)"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-center text-sm">
+                {logType === "check_in" 
+                  ? "Kehadiran Anda telah dicatat di log sistem karena masih di luar jam kerja. Silakan lakukan Check In kembali saat jam kerja dimulai untuk pencatatan resmi."
+                  : "Kepulangan Anda telah dicatat di log sistem. Terima kasih atas kerja kerasnya hari ini."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction 
+                onClick={() => setShowLogDialog(false)}
+                className="w-full rounded-xl bg-foreground text-background hover:bg-foreground/90 transition-all font-semibold"
+              >
+                Mengerti
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </TabsContent>
   )
 }
