@@ -29,23 +29,9 @@ import { ITask } from "@/interface"
 import { cn } from "@/lib/utils"
 import { TaskNode } from "@/types/tasks"
 import { useOrgDateFormat } from "@/hooks/organization/settings/use-org-date-format"
-import { buildTaskTree, flattenTree, StackedAssignees } from "@/components/project-management/tasks/header"
+import { buildTaskTree, flattenTree, StackedAssignees, PriorityBadge } from "@/components/project-management/tasks/header"
 import { useTasksContext } from "../layout"
 import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
-
-// ─── Priority Badge ───────────────────────────────────────────────────────────
-const PriorityBadge = ({ priority }: { priority: string | null }) => {
-    const colors: Record<string, string> = { 
-        high:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-        medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-        low:    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    }
-    return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${priority ? colors[priority] : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
-            {priority || "None"}
-        </span>
-    )
-}
 
 export default function ListPage() {
     const {

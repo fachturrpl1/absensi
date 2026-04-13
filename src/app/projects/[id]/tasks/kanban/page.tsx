@@ -1,16 +1,21 @@
 "use client"
 
-// app/projects/[id]/tasks/kanban/page.tsx
-// Tidak ada fetch. Semua data dari TasksContext.
-
-import { useMemo } from "react"
-import { cn } from "@/lib/utils"
+import { useMemo, useState } from "react"
 import { ITask } from "@/interface"
 import { useTasksContext } from "../layout"
-import { StackedAssignees } from "@/components/project-management/tasks/header"
+import { StackedAssignees, PriorityBadge } from "@/components/project-management/tasks/header"
+import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
+import { updateTask, assignTaskMember } from "@/action/task"
+import { toast } from "sonner"
 
 export default function KanbanPage() {
-    const { tasks, taskStatuses, isLoading, activeTab, projectId } = useTasksContext()
+    const {
+        tasks, members, taskStatuses,
+        isLoading, activeTab,
+        refreshTasks
+    } = useTasksContext()
+
+    const [editingTask, setEditingTask] = useState<ITask | null>(null)
 
     const filteredTasks = useMemo(() => {
         return tasks.filter(task => {
@@ -26,7 +31,7 @@ export default function KanbanPage() {
             }
             return true
         })
-    }, [tasks, projectId, activeTab])
+    }, [tasks, activeTab])
 
     const sortedTasksByStatus = useMemo(() => {
         const map = new Map<number, ITask[]>()
@@ -39,6 +44,24 @@ export default function KanbanPage() {
             tasks: (map.get(status.id) || []).sort((a, b) => (a.position_in_column || 0) - (b.position_in_column || 0)),
         }))
     }, [filteredTasks, taskStatuses])
+
+    const handleUpdate = async (fd: FormData) => {
+        if (!editingTask) return
+        const taskId = editingTask.id
+        const assigneeId = fd.get("assignee_id")
+        fd.delete("assignee_id")
+
+        const res = await updateTask(fd)
+        if (res.success) {
+            if (assigneeId && assigneeId !== "none") {
+                await assignTaskMember(taskId, Number(assigneeId))
+            }
+            await refreshTasks()
+            toast.success("Task updated")
+        } else {
+            toast.error(res.message || "Failed to update task")
+        }
+    }
 
     return (
         <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
@@ -60,12 +83,15 @@ export default function KanbanPage() {
                             <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">No tasks</div>
                         ) : (
                             status.tasks.map((task: ITask) => (
-                                <div key={task.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md">
+                                <div
+                                    key={task.id}
+                                    className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md cursor-pointer transition-shadow"
+                                    onClick={() => setEditingTask(task)}
+                                >
                                     <h4 className="font-medium text-sm text-gray-900 leading-snug">{task.name}</h4>
                                     <div className="flex justify-between items-center mt-3">
-                                        <div className={cn("text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-gray-100")}>
-                                            <span className="w-1.5 h-1.5 rounded-full mr-1 inline-block" style={{ backgroundColor: task.task_status?.color }} />
-                                            {task.priority || "Medium"}
+                                        <div className="flex items-center gap-2">
+                                            <PriorityBadge priority={task.priority} />
                                         </div>
                                         <StackedAssignees assignees={task.assignees || []} max={3} size={6} />
                                     </div>
@@ -75,6 +101,16 @@ export default function KanbanPage() {
                     </div>
                 </div>
             ))}
+
+            <ManageTaskDialog
+                mode="edit"
+                open={!!editingTask}
+                onOpenChange={v => !v && setEditingTask(null)}
+                task={editingTask}
+                members={members}
+                taskStatuses={taskStatuses}
+                onSave={handleUpdate}
+            />
         </div>
     )
 }

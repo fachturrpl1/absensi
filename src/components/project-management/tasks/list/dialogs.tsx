@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { createTask, updateTask, deleteTask, getTasks, assignTaskMember } from "@/action/task"
 import { toast } from "sonner"
-import { ITask } from "@/interface"
+import { ITask, IProject, IOrganization_member, ITaskStatus } from "@/interface"
 import { ListDialogsProps } from "@/types/tasks"
 
 export function ListDialogs({
@@ -100,7 +101,7 @@ export function ListDialogs({
                         >
                             <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                             <SelectContent>
-                                {projects.map((p) => (
+                                {projects.map((p: IProject) => (
                                     <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -111,7 +112,7 @@ export function ListDialogs({
                         >
                             <SelectTrigger><SelectValue placeholder="Select assignee" /></SelectTrigger>
                             <SelectContent>
-                                {members.map((m) => (
+                                {members.map((m: IOrganization_member) => (
                                     <SelectItem key={m.id} value={m.id.toString()}>
                                         {m.user?.display_name}
                                     </SelectItem>
@@ -124,7 +125,7 @@ export function ListDialogs({
                         >
                             <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                             <SelectContent>
-                                {taskStatuses.map((s) => (
+                                {taskStatuses.map((s: ITaskStatus) => (
                                     <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -176,7 +177,7 @@ export function ListDialogs({
                         >
                             <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
                             <SelectContent>
-                                {taskStatuses.map((s) => (
+                                {taskStatuses.map((s: ITaskStatus) => (
                                     <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -187,7 +188,7 @@ export function ListDialogs({
                         >
                             <SelectTrigger><SelectValue placeholder="Select assignee" /></SelectTrigger>
                             <SelectContent>
-                                {members.map((m) => (
+                                {members.map((m: IOrganization_member) => (
                                     <SelectItem key={m.id} value={m.id.toString()}>
                                         {m.user?.display_name}
                                     </SelectItem>

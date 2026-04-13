@@ -54,8 +54,8 @@ export default function ManageTaskDialog({
                 setPriority(task.priority || "medium")
                 setStatusId(task.status_id?.toString() || "")
                 setAssigneeId(task.assignees?.[0]?.organization_member_id?.toString() || "")
-                setStartDate(task.start_date ? task.start_date.split("T")[0] : "")
-                setEndDate(task.end_date ? task.end_date.split("T")[0] : "")
+                setStartDate(task.start_date?.split("T")[0] || "")
+                setEndDate(task.end_date?.split("T")[0] || "")
                 setIsCompleted(!!task.marked_completed_at)
             } else {
                 setName("")
