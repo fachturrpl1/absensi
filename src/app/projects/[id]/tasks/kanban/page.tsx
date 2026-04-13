@@ -6,8 +6,8 @@
 import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { ITask } from "@/interface"
-import { StackedAssignees } from "../layout"
 import { useTasksContext } from "../layout"
+import { StackedAssignees } from "@/components/project-management/tasks/header"
 
 export default function KanbanPage() {
     const { tasks, taskStatuses, isLoading, activeTab, projectId } = useTasksContext()
@@ -15,8 +15,15 @@ export default function KanbanPage() {
     const filteredTasks = useMemo(() => {
         return tasks.filter(task => {
             const isDone = task.task_status?.code === "done"
-            if (activeTab === "active" && isDone) return false
-            if (activeTab === "completed" && !isDone) return false
+            const isArchived = task.is_archived
+
+            if (activeTab === "archived") {
+                if (!isArchived) return false
+            } else {
+                if (isArchived) return false
+                if (activeTab === "active" && isDone) return false
+                if (activeTab === "completed" && !isDone) return false
+            }
             return true
         })
     }, [tasks, projectId, activeTab])

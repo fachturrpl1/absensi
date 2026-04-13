@@ -10,9 +10,9 @@ interface TasksListPageData {
     taskStatuses: ITaskStatus[]
 }
 
-export async function getTasksListPageData(): Promise<TasksListPageData> {
+export async function getTasksListPageData(projectId: string | number): Promise<TasksListPageData> {
     const [tasksRes, membersRes, statusesRes] = await Promise.all([
-        getTasks(),
+        getTasks(projectId),
         getAllOrganization_member(),
         getTaskStatuses(),
     ])

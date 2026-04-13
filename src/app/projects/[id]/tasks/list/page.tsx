@@ -1,18 +1,11 @@
 "use client"
 
-// app/projects/[id]/tasks/list/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Tidak ada fetch di sini. Semua data dari TasksContext (layout).
-// State lokal hanya untuk: search, assignee filter, pagination, dialog edit/delete.
-// Mutasi (update, delete, batch) → optimistic via setTasks dari context.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useMemo, useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react"
+import { Search, Pencil, Trash2, ChevronRight, ChevronDown, Check } from "lucide-react"
 import {
     Table, TableBody, TableCell,
     TableHead, TableHeader, TableRow,
@@ -35,15 +28,32 @@ import { toast } from "sonner"
 import { ITask } from "@/interface"
 import { cn } from "@/lib/utils"
 import { TaskNode } from "@/types/tasks"
+import { useOrgDateFormat } from "@/hooks/organization/settings/use-org-date-format"
 import { buildTaskTree, flattenTree, StackedAssignees } from "@/components/project-management/tasks/header"
 import { useTasksContext } from "../layout"
+import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
+
+// ─── Priority Badge ───────────────────────────────────────────────────────────
+const PriorityBadge = ({ priority }: { priority: string | null }) => {
+    const colors: Record<string, string> = { 
+        high:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+        medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+        low:    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    }
+    return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${priority ? colors[priority] : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
+            {priority || "None"}
+        </span>
+    )
+}
 
 export default function ListPage() {
     const {
         tasks, members, taskStatuses,
         isLoading, activeTab,
-        setTasks, projectId,
+        setTasks, projectId, refreshTasks,
     } = useTasksContext()
+    const { formatDate } = useOrgDateFormat()
 
     const searchParams = useSearchParams()
 
@@ -58,9 +68,6 @@ export default function ListPage() {
     // ── Dialog state ───────────────────────────────────────────────────────────
     const [taskToDelete, setTaskToDelete] = useState<ITask | null>(null)
     const [editingTask, setEditingTask] = useState<ITask | null>(null)
-    const [editTitle, setEditTitle] = useState("")
-    const [editStatus, setEditStatus] = useState<number | "">("")
-    const [editAssignee, setEditAssignee] = useState<number | "">("")
 
     // ── Reset pagination saat filter berubah ──────────────────────────────────
     useEffect(() => {
@@ -73,8 +80,15 @@ export default function ListPage() {
         return tasks.filter((task: ITask) => {
 
             const isDone = task.task_status?.code === "done"
-            if (activeTab === "active" && isDone) return false
-            if (activeTab === "completed" && !isDone) return false
+            const isArchived = task.is_archived
+
+            if (activeTab === "archived") {
+                if (!isArchived) return false
+            } else {
+                if (isArchived) return false
+                if (activeTab === "active" && isDone) return false
+                if (activeTab === "completed" && !isDone) return false
+            }
 
             if (selectedAssignee !== "all") {
                 const ids = task.assignees?.map(a => String(a.organization_member_id)) ?? []
@@ -114,32 +128,23 @@ export default function ListPage() {
     const toggleSelect = (id: string) =>
         setRowSelection(prev => { const next = { ...prev }; if (next[id]) delete next[id]; else next[id] = true; return next })
 
-    // ── Mutations — semua optimistic ───────────────────────────────────────────
+    // ── Mutations ──────────────────────────────────────────────────────────────
 
-    const handleUpdate = async () => {
-        if (!editingTask || !editTitle.trim()) return
-        const snapshot = editingTask
+    const handleUpdate = async (fd: FormData) => {
+        if (!editingTask) return
+        const taskId = editingTask.id
+        const assigneeId = fd.get("assignee_id")
+        fd.delete("assignee_id")
 
-        // Optimistic
-        setTasks(prev => prev.map(t =>
-            t.id === snapshot.id
-                ? { ...t, name: editTitle, status_id: editStatus || t.status_id, task_status: editStatus ? (taskStatuses.find(s => s.id === editStatus) ?? t.task_status) : t.task_status }
-                : t,
-        ))
-        setEditingTask(null)
-
-        const fd = new FormData()
-        fd.append("id", snapshot.id.toString())
-        fd.append("name", editTitle)
-        if (editStatus) fd.append("status_id", editStatus.toString())
         const res = await updateTask(fd)
-
         if (res.success) {
-            if (editAssignee) await assignTaskMember(snapshot.id, Number(editAssignee))
+            if (assigneeId && assigneeId !== "none") {
+                await assignTaskMember(taskId, Number(assigneeId))
+            }
+            await refreshTasks()
             toast.success("Task updated")
         } else {
-            setTasks(prev => prev.map(t => t.id === snapshot.id ? snapshot : t)) // rollback
-            toast.error("Failed to update task")
+            toast.error(res.message || "Failed to update task")
         }
     }
 
@@ -156,7 +161,7 @@ export default function ListPage() {
         const res = await deleteTask(fd)
         if (!res.success) {
             setTasks(prev => [...prev, snapshot]) // rollback
-            toast.error("Failed to delete task")
+            toast.error(res.message || "Failed to delete task")
         }
     }
 
@@ -224,18 +229,23 @@ export default function ListPage() {
                             <TableRow>
                                 <TableHead className="w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></TableHead>
                                 <TableHead>Task</TableHead>
+                                <TableHead>Deescription</TableHead>
+                                <TableHead>Priority</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Assignee</TableHead>
+                                <TableHead>Start Date</TableHead>
+                                <TableHead>End Date</TableHead>
+                                <TableHead>Completed</TableHead>
                                 <TableHead>Created</TableHead>
                                 <TableHead className="text-right w-24">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow><TableCell colSpan={7} className="text-center py-16 text-muted-foreground">Loading tasks...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={11} className="text-center py-16 text-muted-foreground">Loading tasks...</TableCell></TableRow>
                             ) : displayRows.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                                    <TableCell colSpan={11} className="text-center py-16 text-muted-foreground">
                                         {searchQuery || selectedAssignee !== "all" ? "No tasks match your filters." : activeTab === "active" ? "No active tasks. Create one to get started." : "No tasks found."}
                                     </TableCell>
                                 </TableRow>
@@ -255,6 +265,14 @@ export default function ListPage() {
                                                     <span className={cn("text-sm font-medium line-clamp-2", task.task_status?.code === "done" && "line-through text-muted-foreground")}>{task.name}</span>
                                                 </div>
                                             </TableCell>
+                                            <TableCell className="max-w-[150px]">
+                                                <span className="text-xs text-muted-foreground line-clamp-1" title={task.description || ""}>
+                                                    {task.description || "—"}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
+                                                <PriorityBadge priority={task.priority} />
+                                            </TableCell>
                                             <TableCell>
                                                 {task.task_status
                                                     ? <span className="inline-flex px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide" style={{ backgroundColor: `${task.task_status.color}20`, color: task.task_status.color }}>{task.task_status.name}</span>
@@ -265,11 +283,25 @@ export default function ListPage() {
                                                     ? <StackedAssignees assignees={task.assignees} max={3} />
                                                     : <span className="text-xs text-muted-foreground">Unassigned</span>}
                                             </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
-                                                {task.created_at ? new Date(task.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {task.start_date ? formatDate(task.start_date) : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {task.end_date ? formatDate(task.end_date) : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-xs font-medium">
+                                                {task.marked_completed_at ? (
+                                                    <div className="flex items-center gap-1.5 text-emerald-600">
+                                                        <Check className="h-3.5 w-3.5" />
+                                                        {formatDate(task.marked_completed_at)}
+                                                    </div>
+                                                ) : "—"}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {formatDate(task.created_at)}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingTask(task); setEditTitle(task.name); setEditStatus(task.status_id || ""); setEditAssignee(Number(task.assignees?.[0]?.organization_member_id) || "") }}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingTask(task)}>
                                                     <Pencil className="h-3.5 w-3.5" />
                                                 </Button>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setTaskToDelete(task)}>
@@ -294,27 +326,15 @@ export default function ListPage() {
                 onPageSizeChange={(size: number) => { setPageSize(size); setCurrentPage(1) }}
             />
 
-            {/* Edit Dialog */}
-            <Dialog open={!!editingTask} onOpenChange={v => !v && setEditingTask(null)}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Edit Task</DialogTitle></DialogHeader>
-                    <div className="space-y-3 py-4">
-                        <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && handleUpdate()} autoFocus />
-                        <Select value={editStatus.toString()} onValueChange={v => setEditStatus(Number(v))}>
-                            <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                            <SelectContent>{taskStatuses.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Select value={editAssignee.toString()} onValueChange={v => setEditAssignee(Number(v))}>
-                            <SelectTrigger><SelectValue placeholder="Select assignee" /></SelectTrigger>
-                            <SelectContent>{members.map(m => <SelectItem key={m.id} value={m.id.toString()}>{m.user?.display_name || `${m.user?.first_name || ""} ${m.user?.last_name || ""}`.trim()}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setEditingTask(null)}>Cancel</Button>
-                        <Button onClick={handleUpdate} disabled={!editTitle.trim()}>Save</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            <ManageTaskDialog
+                mode="edit"
+                open={!!editingTask}
+                onOpenChange={v => !v && setEditingTask(null)}
+                task={editingTask}
+                members={members}
+                taskStatuses={taskStatuses}
+                onSave={handleUpdate}
+            />
 
             {/* Delete Dialog */}
             <Dialog open={!!taskToDelete} onOpenChange={v => !v && setTaskToDelete(null)}>

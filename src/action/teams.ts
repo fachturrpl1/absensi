@@ -49,6 +49,56 @@ export const getTeams = async (
   return { success: true, data: data as ITeams[] };
 };
 
+// ─── GET TEAMS BY PROJECT ───────────────────────────────────────────────────
+// Mengambil teams yang terdaftar di project tertentu via team_projects
+export const getTeamsByProject = async (
+  projectId: number,
+  organizationId?: number
+): Promise<{ success: boolean; message?: string; data: ITeams[] }> => {
+  const supabase = await createClient();
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { success: false, message: "User not logged in", data: [] };
+  }
+
+  // Ambil team_id yang terdaftar di project ini
+  const { data: teamProjects, error: tpError } = await supabase
+    .from("team_projects")
+    .select("team_id")
+    .eq("project_id", projectId);
+
+  if (tpError) {
+    console.error("getTeamsByProject team_projects error:", tpError);
+    return { success: false, message: tpError.message, data: [] };
+  }
+
+  if (!teamProjects || teamProjects.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  const teamIds = teamProjects.map((tp) => tp.team_id);
+
+  let query = supabase
+    .from("teams")
+    .select("id, organization_id, code, name, description, is_active, created_at, updated_at, settings, metadata")
+    .in("id", teamIds);
+
+  // Opsional: filter by org jika diberikan
+  if (organizationId) {
+    query = query.eq("organization_id", organizationId);
+  }
+
+  const { data, error } = await query.order("name", { ascending: true });
+
+  if (error) {
+    console.error("getTeamsByProject error:", error);
+    return { success: false, message: error.message, data: [] };
+  }
+
+  return { success: true, data: data as ITeams[] };
+};
+
 // ─── GET TEAM BY SLUG ───────────────────────────────────────────────────────
 export const getTeamBySlug = async (slug: string) => {
   const supabase = await createClient();
@@ -56,7 +106,6 @@ export const getTeamBySlug = async (slug: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, message: "User not logged in", data: null };
 
-  // Ambil org_id user
   const { data: member } = await supabase
     .from("organization_members")
     .select("organization_id")
@@ -93,9 +142,6 @@ export const getTeamBySlug = async (slug: string) => {
 };
 
 // ─── GET TEAM MEMBERS ───────────────────────────────────────────────────────
-// Menggunakan multi-step query manual karena Supabase nested join
-// untuk user_profiles via organization_members tidak reliable
-// tanpa mengetahui nama FK constraint yang tepat.
 export const getTeamMembers = async (teamId: number) => {
   const supabase = await createClient();
 
@@ -103,8 +149,6 @@ export const getTeamMembers = async (teamId: number) => {
     return { success: false, message: "Invalid Team ID", data: [] as ITeamMember[] };
   }
 
-  // Step 1: Fetch team_members + positions detail
-  // Kita pisahkan penarikan kolom 'positions' (ID) dan alias joinnya
   const { data: teamMembers, error: tmError } = await supabase
     .from("team_members")
     .select(`
@@ -130,8 +174,7 @@ export const getTeamMembers = async (teamId: number) => {
     return { success: true, data: [] as ITeamMember[] };
   }
 
-  // Step 2: Fetch organization_members untuk semua member_id
-  const memberIds = teamMembers.map((tm) => tm.organization_member_id)
+  const memberIds = teamMembers.map((tm) => tm.organization_member_id);
 
   const { data: orgMembers, error: omError } = await supabase
     .from("organization_members")
@@ -143,8 +186,7 @@ export const getTeamMembers = async (teamId: number) => {
     return { success: false, message: omError.message, data: [] as ITeamMember[] };
   }
 
-  // Step 3: Fetch user_profiles untuk semua user_id
-  const userIds = (orgMembers ?? []).map((om) => om.user_id).filter(Boolean)
+  const userIds = (orgMembers ?? []).map((om) => om.user_id).filter(Boolean);
 
   const { data: userProfiles, error: upError } = await supabase
     .from("user_profiles")
@@ -156,13 +198,12 @@ export const getTeamMembers = async (teamId: number) => {
     return { success: false, message: upError.message, data: [] as ITeamMember[] };
   }
 
-  // Step 4: Gabungkan semua data
-  const orgMemberMap = new Map((orgMembers ?? []).map((om) => [om.id, om]))
-  const userProfileMap = new Map((userProfiles ?? []).map((up) => [up.id, up]))
+  const orgMemberMap = new Map((orgMembers ?? []).map((om) => [om.id, om]));
+  const userProfileMap = new Map((userProfiles ?? []).map((up) => [up.id, up]));
 
   const mapped: ITeamMember[] = (teamMembers ?? []).map((tm: any) => {
-    const orgMember = orgMemberMap.get(tm.organization_member_id) ?? null
-    const userProfile = orgMember ? (userProfileMap.get(orgMember.user_id) ?? null) : null
+    const orgMember = orgMemberMap.get(tm.organization_member_id) ?? null;
+    const userProfile = orgMember ? (userProfileMap.get(orgMember.user_id) ?? null) : null;
 
     return {
       id: tm.id,
@@ -187,8 +228,8 @@ export const getTeamMembers = async (teamId: number) => {
               : null,
           }
         : { id: 0, is_active: false, user: null },
-    }
-  })
+    };
+  });
 
   return { success: true, data: mapped };
 };
@@ -206,7 +247,7 @@ export const createTeam = async (payload: Partial<ITeams>) => {
     .from("teams")
     .insert([{
       organization_id: payload.organization_id,
-      code: null, // auto-generated by database trigger
+      code: null,
       name: payload.name,
       description: payload.description || null,
       is_active: payload.is_active ?? true,

@@ -180,27 +180,27 @@ export interface ITeams {
 }
 
 export interface ITeamMember {
-  id: number;
-  team_id: number;
-  organization_member_id: number;
-  positions: number | null;
-  is_primary_team: boolean;
-  joined_at: string;
-  organization_members: {
     id: number;
-    is_active: boolean;
-    user: {
-      first_name: string | null;
-      last_name: string | null;
-      display_name: string | null;
-      profile_photo_url: string | null;
-      email: string | null;
+    team_id: number;
+    organization_member_id: number;
+    positions: number | null;
+    is_primary_team: boolean;
+    joined_at: string;
+    organization_members: {
+        id: number;
+        is_active: boolean;
+        user: {
+            first_name: string | null;
+            last_name: string | null;
+            display_name: string | null;
+            profile_photo_url: string | null;
+            email: string | null;
+        } | null;
+    };
+    positions_detail?: {
+        id: number;
+        title: string;
     } | null;
-  };
-  positions_detail?: {
-    id: number;
-    title: string;
-  } | null;
 }
 
 // ── Domain types ─────────────────────────────────────────────────────────────
@@ -256,6 +256,11 @@ export interface IProjectClientProject {
     clients: Pick<IClient, 'id' | 'name'> | null;
 }
 
+// ── Raw project_members dari Supabase (hanya field yang di-select) ───────────
+export interface IProjectMemberRaw {
+    id: number;
+}
+
 export interface IProject {
     id: number;
     organization_id: number;
@@ -267,6 +272,7 @@ export interface IProject {
     start_date?: string | null;
     end_date?: string | null;
     is_billable: boolean;
+    is_archived?: boolean;
     currency_code?: string;
     budget_amount?: number | null;
     budget_hours?: number | null;
@@ -277,9 +283,11 @@ export interface IProject {
     updated_at?: string;
     deleted_at?: string | null;
 
-    organizations?: { id: number; name: string };
-    team_projects?: IProjectTeamProject[];
-    tasks?: { count: number }[];
+    organizations?:   { id: number; name: string };
+    team_projects?:   IProjectTeamProject[];
+    client_projects?: IProjectClientProject[];
+    tasks?:           { count: number }[];
+    project_members?: IProjectMemberRaw[];
 }
 
 export interface IProjectMember {
@@ -296,6 +304,7 @@ export interface IProjectWithMembers extends IProject {
 export interface ISimpleMember {
     id: string;
     name: string;
+    photoUrl?: string | null;
     department_id?: string | null;
 }
 
@@ -339,25 +348,19 @@ export interface MemberLimit {
 }
 
 export interface NewProjectForm {
-    // General
     names: string;
     description: string;
     priority: "high" | "medium" | "low";
     lifecycleStatus: string;
     isArchived: boolean;
-    // Dates
     startDate: string | null;
     endDate: string | null;
-    // Billing
     billable: boolean;
-    // Tracking
     disableActivity: boolean;
     allowTracking: boolean;
     disableIdle: boolean;
-    // Relations
     members: string[];
     teams: string[];
-    // Budget
     budgetType: string;
     budgetBasedOn: string;
     budgetCost: string;
@@ -368,7 +371,6 @@ export interface NewProjectForm {
     budgetStopAt: string;
     budgetResets: string;
     budgetIncludeNonBillable: boolean;
-    // Member limits
     memberLimits: MemberLimit[];
     memberLimitNotifyAt: string;
     memberLimitNotifyMembers: boolean;
@@ -732,19 +734,23 @@ export interface ITaskStatus {
 
 export interface ITask {
     id: number;
+    project_id: number;
     parent_task_id?: number | null;
     status_id: number;
-    position_in_column: number;
     name: string;
     description?: string | null;
     priority: 'low' | 'medium' | 'high' | 'urgent';
     estimated_hours?: number | null;
-    due_date?: string | null;
-    completed_at?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    marked_completed_at?: string | null;
+    position_in_column?: number | null;
     lifecycle_status?: 'active' | 'completed' | 'archived';
+    is_archived: boolean;
     created_at?: string;
     updated_at?: string;
     deleted_at?: string | null;
+    created_by?: number | null;
     assignees?: ITaskAssignee[];
     task_status?: ITaskStatus;
 }
@@ -753,7 +759,6 @@ export interface ITaskAssignee {
     id: number;
     task_id: number;
     organization_member_id: number;
-    role: 'assignee' | 'reviewer' | 'watcher';
     is_primary: boolean;
     assigned_at?: string;
     updated_at?: string;

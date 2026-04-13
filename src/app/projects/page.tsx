@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-// UI Components
+import { IProject } from "@/interface"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -30,11 +30,14 @@ import {
 } from "@/action/projects"
 import { getTeams } from "@/action/teams"
 import { useOrgStore } from "@/store/org-store"
-import type { ITeams, ISimpleMember, Project, NewProjectForm } from "@/interface"
+import type { ITeams, ISimpleMember, NewProjectForm } from "@/interface"
 
 // ─── Types & Constants ───────────────────────────────────────────────────────
 
-export interface ProjectRow extends Project {
+export interface ProjectRow {
+  id: string
+  name: string
+  teams: string[]
   description: string | null
   priority: "high" | "medium" | "low" | null
   lifecycleStatus: string
@@ -46,6 +49,9 @@ export interface ProjectRow extends Project {
   endDate: string | null
   createdAt: string | null
   budgetLabel: string
+  clientName: string
+  teamCount: number
+  directMembersCount: number
 }
 
 const ADMIN_ROLE_CODES    = ["admin", "owner", "super_admin", "administrator"]
@@ -97,7 +103,8 @@ export default function ProjectsPage() {
   // Table States
   const [activeTab, setActiveTab]       = useState<"active" | "archived">("active")
   const [search, setSearch]             = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter]     = useState<string>("all")
+  const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [selectedIds, setSelectedIds]   = useState<string[]>([])
   const [currentPage, setCurrentPage]   = useState(1)
   const [pageSize, setPageSize]         = useState(10)
@@ -114,41 +121,46 @@ export default function ProjectsPage() {
   const [transferOpen, setTransferOpen]       = useState(false)
   const [transferProject, setTransferProject] = useState<ProjectRow | null>(null)
 
-  // ─── Fetch ────────────────────────────────────────────────────────────────
-  const fetchProjects = async () => {
-    setIsLoading(true)
-    setFetchError(null)
-    if (!organizationId) { setData([]); setIsLoading(false); return }
+const fetchProjects = async () => {
+  setIsLoading(true)
+  setFetchError(null)
+  if (!organizationId) { setData([]); setIsLoading(false); return }
 
-    const res = await getAllProjects(organizationId)
-    if (res.success && res.data) {
-      setData(
-        res.data.map((p: any) => ({
-          ...p,
-          id:              String(p.id),
-          description:     p.description ?? null,
-          priority:        p.priority ?? "medium",
-          lifecycleStatus: p.lifecycle_status ?? "active",
-
-          // ─ Kunci perubahan: isArchived dari kolom is_archived, BUKAN lifecycle_status ─
-          isArchived:      p.is_archived ?? false,
-
-          isBillable:      p.is_billable ?? true,
-          budgetAmount:    p.budget_amount ? Number(p.budget_amount) : null,
-          currencyCode:    p.currency_code ?? "USD",
-          startDate:       p.start_date ?? null,
-          endDate:         p.end_date ?? null,
-          createdAt:       p.created_at ?? null,
-          budgetLabel:     p.budget_amount
-            ? `${p.currency_code || "USD"} ${Number(p.budget_amount).toLocaleString()}`
-            : "No budget",
-        }))
-      )
-    } else {
-      setFetchError(res.message || "Failed to fetch projects")
-    }
-    setIsLoading(false)
+  const res = await getAllProjects(organizationId)
+  if (res.success && res.data) {
+    setData(
+      res.data.map((p: IProject) => ({
+        id:              String(p.id),
+        name:            p.name,
+        teams:           (p.team_projects ?? [])
+                          .map((tp) => tp.teams?.name)
+                          .filter((n): n is string => Boolean(n)),
+        description:     p.description ?? null,
+        priority:        (p.priority as "high" | "medium" | "low") ?? "medium",
+        lifecycleStatus: p.lifecycle_status ?? "active",
+        isArchived:      p.is_archived ?? false,
+        isBillable:      p.is_billable ?? true,
+        budgetAmount:    p.budget_amount ? Number(p.budget_amount) : null,
+        currencyCode:    p.currency_code ?? "USD",
+        startDate:       p.start_date ?? null,
+        endDate:         p.end_date ?? null,
+        createdAt:       p.created_at ?? null,
+        budgetLabel:     p.budget_amount
+          ? `${p.currency_code ?? "USD"} ${Number(p.budget_amount).toLocaleString()}`
+          : "No budget",
+        clientName:      (p.client_projects ?? [])
+          .map((cp) => cp.clients?.name)
+          .filter((name): name is string => Boolean(name))
+          .join(", ") || "-",
+        teamCount:          (p.team_projects ?? []).length,
+        directMembersCount: (p.project_members ?? []).length,
+      }))
+    )
+  } else {
+    setFetchError(res.message || "Failed to fetch projects")
   }
+  setIsLoading(false)
+}
 
   useEffect(() => {
     fetchProjects()
@@ -199,7 +211,12 @@ export default function ProjectsPage() {
       result = result.filter(p => p.lifecycleStatus === statusFilter)
     }
 
-    // 3. Filter berdasarkan search
+    // 3. Filter berdasarkan priority
+    if (priorityFilter !== "all") {
+      result = result.filter(p => p.priority === priorityFilter)
+    }
+    
+    // 4. Filter berdasarkan search
     if (search) {
       result = result.filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase())
@@ -221,7 +238,7 @@ export default function ProjectsPage() {
         )
       return sortDir === "asc" ? cmp : -cmp
     })
-  }, [activeTab, data, search, statusFilter, sortField, sortDir])
+  }, [activeTab, data, search, statusFilter, priorityFilter, sortField, sortDir])
 
   const paginated   = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize)
   const totalPages  = Math.ceil(filtered.length / pageSize) || 1
@@ -329,7 +346,6 @@ export default function ProjectsPage() {
                     <SelectItem value="completed">Completed</SelectItem>
                   </>
                 ) : (
-                  // Pada tab archived, lifecycle_status masih mungkin bervariasi
                   <>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="on_hold">On Hold</SelectItem>
@@ -337,6 +353,22 @@ export default function ProjectsPage() {
                     <SelectItem value="archived">Archived</SelectItem>
                   </>
                 )}
+              </SelectContent>
+            </Select>
+
+            {/* Priority filter dropdown */}
+            <Select
+              value={priorityFilter}
+              onValueChange={v => { setPriorityFilter(v); setCurrentPage(1) }}
+            >
+              <SelectTrigger className="h-9 w-36">
+                <SelectValue placeholder="All priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All priorities</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -362,12 +394,12 @@ export default function ProjectsPage() {
           sortField={sortField}
           sortDir={sortDir}
           // activeFilterCount dipakai tabel untuk tampilkan tombol "Clear filters"
-          activeFilterCount={(search ? 1 : 0) + (statusFilter !== "all" ? 1 : 0)}
+          activeFilterCount={(search ? 1 : 0) + (statusFilter !== "all" ? 1 : 0) + (priorityFilter !== "all" ? 1 : 0)}
           onSort={f => {
             if (sortField === f) setSortDir(d => d === "asc" ? "desc" : "asc")
             else { setSortField(f); setSortDir("asc") }
           }}
-          onClearFilters={() => { setSearch(""); setStatusFilter("all") }}
+          onClearFilters={() => { setSearch(""); setStatusFilter("all"); setPriorityFilter("all") }}
           onToggleSelectAll={() => {
             const allSel = paginated.every(p => selectedIds.includes(p.id))
             if (allSel) setSelectedIds(prev => prev.filter(id => !paginated.find(p => p.id === id)))

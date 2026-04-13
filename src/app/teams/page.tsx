@@ -1,18 +1,20 @@
 "use client"
 
 import React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { Plus, Search, Users as TeamIcon } from "lucide-react"
+import { Plus, Search, Users as TeamIcon, X } from "lucide-react"
 import { useForm, Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import { ITeams } from "@/interface"
-import { getTeams, createTeam, updateTeam, deleteTeam } from "@/action/teams"
+import { getTeams, getTeamsByProject, createTeam, updateTeam, deleteTeam } from "@/action/teams"
 import { useHydration } from "@/hooks/useHydration"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Empty, EmptyHeader, EmptyTitle, EmptyMedia } from "@/components/ui/empty"
 import { TableSkeleton, groupsColumns as teamsSkeletonColumns } from "@/components/skeleton/tables-loading"
@@ -23,8 +25,14 @@ import { TeamFormDialog, TeamForm, teamSchema } from "@/components/teams/dialogs
 import { TeamDeleteDialog } from "@/components/teams/dialogs/delete-dialog"
 
 export default function TeamsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { isHydrated, organizationId } = useHydration()
+
+  // Baca ?project=<id> dari URL
+  const projectFilter = searchParams.get("project")
+  const projectId = projectFilter ? Number(projectFilter) : null
 
   const [teams, setTeams] = React.useState<ITeams[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -52,14 +60,17 @@ export default function TeamsPage() {
     if (!organizationId) return
     try {
       setLoading(true)
-      const result = await getTeams(Number(organizationId))
+      // Jika ada filter project → fetch hanya teams yang terdaftar di project itu
+      const result = projectId
+        ? await getTeamsByProject(projectId, Number(organizationId))
+        : await getTeams(Number(organizationId))
       if (result.success) setTeams(result.data)
     } catch {
       toast.error("Failed to fetch teams")
     } finally {
       setLoading(false)
     }
-  }, [organizationId])
+  }, [organizationId, projectId])
 
   React.useEffect(() => {
     if (isHydrated && organizationId) fetchTeamsData()
@@ -67,7 +78,12 @@ export default function TeamsPage() {
 
   React.useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, statusFilter])
+  }, [searchQuery, statusFilter, projectId])
+
+  // Hapus filter project dari URL
+  const clearProjectFilter = () => {
+    router.push("/teams")
+  }
 
   const handleSubmit = async (values: TeamForm) => {
     if (values.organization_id === 0) {
@@ -155,7 +171,25 @@ export default function TeamsPage() {
   return (
     <div className="flex flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Teams</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">Teams</h1>
+          {/* Badge filter project aktif */}
+          {projectId && (
+            <Badge
+              variant="secondary"
+              className="flex items-center gap-1 text-xs font-normal"
+            >
+              Project #{projectId}
+              <button
+                onClick={clearProjectFilter}
+                className="ml-1 rounded-full hover:bg-muted p-0.5 transition-colors"
+                aria-label="Clear project filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
@@ -189,7 +223,9 @@ export default function TeamsPage() {
         <Empty className="py-20">
           <EmptyHeader>
             <EmptyMedia><TeamIcon className="h-12 w-12" /></EmptyMedia>
-            <EmptyTitle>No teams found</EmptyTitle>
+            <EmptyTitle>
+              {projectId ? "No teams assigned to this project" : "No teams found"}
+            </EmptyTitle>
           </EmptyHeader>
         </Empty>
       ) : (

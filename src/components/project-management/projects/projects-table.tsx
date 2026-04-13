@@ -2,20 +2,23 @@
 
 import React from "react"
 import Link from "next/link"
-import { Lock, CalendarClock, Pencil } from "lucide-react"
-import { 
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell 
+import { Lock, CalendarClock, Pencil, Users, User } from "lucide-react"
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Tooltip, TooltipContent, TooltipTrigger
+  Tooltip, TooltipContent, TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ProjectRow } from "@/app/projects/page"
+import { useOrgDateFormat, isDateInFuture } from "@/hooks/organization/settings/use-org-date-format"
 
+// ─── Priority Badge ───────────────────────────────────────────────────────────
 const PriorityBadge = ({ priority }: { priority: string | null }) => {
   const colors: Record<string, string> = {
     high:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
@@ -29,10 +32,7 @@ const PriorityBadge = ({ priority }: { priority: string | null }) => {
   )
 }
 
-// ─── STATUS BADGE ────────────────────────────────────────────────────────────
-// Hanya menampilkan lifecycle_status operasional (active, on_hold, completed).
-// "archived" TIDAK akan muncul di sini karena tab archived menggunakan is_archived,
-// bukan lifecycle_status. Namun tetap ada fallback jika data tidak terduga.
+// ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   active: {
     label: "Active",
@@ -73,14 +73,14 @@ const StatusBadge = ({ status }: { status: string }) => {
     </Badge>
   )
 }
-// ────────────────────────────────────────────────────────────────────────────
 
+// ─── Sort Icon ────────────────────────────────────────────────────────────────
 const SortIcon = ({ field, current, dir }: { field: string; current: string; dir: string }) => {
   if (field !== current) return null
   return <span className="ml-1">{dir === "asc" ? "↑" : "↓"}</span>
 }
 
-// ─── Props Interface ─────────────────────────────────────────────────────────
+// ─── Props ────────────────────────────────────────────────────────────────────
 interface TableProjectsProps {
   isLoading: boolean
   fetchError: string | null
@@ -111,21 +111,11 @@ export function ProjectsTable(props: TableProjectsProps) {
     onEdit, onArchive, onRestore, onDelete, onTransfer,
   } = props
 
-  const formatDate = (date: string | null) => {
-    if (!date) return "-"
-    return new Date(date).toLocaleDateString("id-ID", {
-      day: "numeric", month: "short", year: "numeric",
-    })
-  }
-
-  const isBeforeStartDate = (date: string | null) => {
-    if (!date) return false
-    return new Date(date) > new Date()
-  }
+  const { formatDate } = useOrgDateFormat()
 
   return (
     <div className="w-full overflow-x-auto">
-      <Table className="min-w-[1000px]">
+      <Table className="min-w-[1200px]">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             <TableHead className="w-10">
@@ -156,7 +146,6 @@ export function ProjectsTable(props: TableProjectsProps) {
               </button>
             </TableHead>
             <TableHead>
-              {/* ─ Fix: typo "lifecycle\nStatus" diperbaiki menjadi "lifecycleStatus" ─ */}
               <button
                 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
                 onClick={() => onSort("lifecycleStatus")}
@@ -192,6 +181,16 @@ export function ProjectsTable(props: TableProjectsProps) {
               </button>
             </TableHead>
             <TableHead>
+              <span className="text-xs font-medium uppercase tracking-wide">Client</span>
+            </TableHead>
+            {/* ── Kolom baru ── */}
+            <TableHead>
+              <span className="text-xs font-medium uppercase tracking-wide">Teams</span>
+            </TableHead>
+            <TableHead>
+              <span className="text-xs font-medium uppercase tracking-wide">Members</span>
+            </TableHead>
+            <TableHead>
               <button
                 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
                 onClick={() => onSort("createdAt")}
@@ -204,10 +203,12 @@ export function ProjectsTable(props: TableProjectsProps) {
             </TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} className="text-center text-muted-foreground py-16">
+              {/* colSpan naik dari 12 → 14 karena +2 kolom */}
+              <TableCell colSpan={14} className="text-center text-muted-foreground py-16">
                 {fetchError ? (
                   <div className="text-destructive font-medium">Error: {fetchError}</div>
                 ) : isLoading ? (
@@ -232,7 +233,7 @@ export function ProjectsTable(props: TableProjectsProps) {
             </TableRow>
           ) : (
             data.map(p => {
-              const notStarted = isBeforeStartDate(p.startDate)
+              const notStarted = isDateInFuture(p.startDate)
               const readOnly   = notStarted && !isAdmin
 
               return (
@@ -327,7 +328,7 @@ export function ProjectsTable(props: TableProjectsProps) {
                     <PriorityBadge priority={p.priority} />
                   </TableCell>
 
-                  {/* Status — murni lifecycle_status, tidak bercampur is_archived */}
+                  {/* Status */}
                   <TableCell>
                     <StatusBadge status={p.lifecycleStatus} />
                   </TableCell>
@@ -353,12 +354,73 @@ export function ProjectsTable(props: TableProjectsProps) {
 
                   {/* End Date */}
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">{formatDate(p.endDate)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDate(p.endDate)}
+                    </span>
+                  </TableCell>
+
+                  {/* Client */}
+                  <TableCell className="max-w-[150px]">
+                    {p.clientName !== "-" ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-sm text-muted-foreground truncate block cursor-pointer">
+                            {p.clientName}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          {p.clientName}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-sm text-muted-foreground italic opacity-40 truncate block">
+                        -
+                      </span>
+                    )}
+                  </TableCell>
+
+                  {/* ── Teams ── */}
+                  <TableCell
+                    onClick={e => e.stopPropagation()}
+                    className="cursor-default"
+                  >
+                    {p.teamCount === 0 ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground opacity-50">
+                        <Users className="h-3 w-3" />
+                        0
+                      </span>
+                    ) : (
+                      <Link
+                        href={`/teams?project=${p.id}`}
+                        onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        <Users className="h-3 w-3" />
+                        {p.teamCount}
+                      </Link>
+                    )}
+                  </TableCell>
+
+                  {/* ── Direct Members ── */}
+                  <TableCell
+                    onClick={e => e.stopPropagation()}
+                    className="cursor-default"
+                  >
+                    <button
+                      onClick={e => { e.stopPropagation(); onEdit(p, "members") }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline disabled:pointer-events-none disabled:opacity-50"
+                      disabled={readOnly}
+                    >
+                      <User className="h-3 w-3" />
+                      {p.directMembersCount}
+                    </button>
                   </TableCell>
 
                   {/* Created At */}
                   <TableCell>
-                    <span className="text-sm text-muted-foreground">{formatDate(p.createdAt)}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatDate(p.createdAt)}
+                    </span>
                   </TableCell>
 
                   {/* Actions */}
@@ -375,11 +437,11 @@ export function ProjectsTable(props: TableProjectsProps) {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        {/* ─ Archived check sekarang dari is_archived, bukan lifecycle_status ─ */}
                         {!p.isArchived ? (
                           <>
                             <DropdownMenuItem onSelect={() => onEdit(p, "general")}>Edit project</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onEdit(p, "members")}>Manage members</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => onEdit(p, "teams")}>Manage teams</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onEdit(p, "budget")}>Edit budget</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => onArchive(p.id)}>Archive project</DropdownMenuItem>
@@ -396,6 +458,7 @@ export function ProjectsTable(props: TableProjectsProps) {
                           <>
                             <DropdownMenuItem disabled>Edit project</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onEdit(p, "members")}>Manage members</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => onEdit(p, "teams")}>Manage teams</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onRestore(p.id)}>Restore project</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem

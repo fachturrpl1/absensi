@@ -4,7 +4,7 @@ import { RowSelectionState } from "@tanstack/react-table"
 // ─── View & Tab ───────────────────────────────────────────────────────────────
 
 export type CurrentView = "list" | "board" | "timeline"
-export type ActiveTab = "active" | "completed" | "all"
+export type ActiveTab = "active" | "completed" | "archived" | "all"
 
 // ─── Task Tree ────────────────────────────────────────────────────────────────
 // Single source of truth — import TaskNode dari sini, bukan dari header.tsx
@@ -16,6 +16,7 @@ export type TaskNode = ITask & { children: TaskNode[] }
 export interface TabCounts {
     active: number
     completed: number
+    archived: number
     all: number
 }
 

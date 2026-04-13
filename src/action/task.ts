@@ -9,37 +9,32 @@ async function getSupabase() {
 }
 
 /**
- * Fetch all tasks for the current organization
+ * Fetch tasks for a project
  */
-export const getTasks = async (organizationId?: string | number) => {
+export const getTasks = async (projectId?: string | number) => {
     const supabase = await getSupabase();
-    let targetOrgId = organizationId;
 
-    if (!targetOrgId) {
-        try {
-            targetOrgId = await getUserOrganization(supabase);
-        } catch (error) {
-            console.error("getTasks: org resolution failed:", error);
-            return { success: false, message: "Unauthorized or no organization found", data: [] };
-        }
-    }
-
-    const { data, error } = await supabase
+    const query = supabase
         .from("tasks")
         .select(`
             *,
             assignees:task_assignees(
                 id,
                 organization_member_id,
+                is_primary,
                 member:organization_members(
                     id,
                     user:user_profiles(id, first_name, last_name, display_name, profile_photo_url)
                 )
             ),
             task_status:task_statuses(*)
-        `)
-        .eq("organization_id", targetOrgId)
-        .order("created_at", { ascending: false });
+        `);
+
+    if (projectId) {
+        query.eq("project_id", projectId);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
         console.error("getTasks error:", error);
@@ -86,23 +81,20 @@ export const getTaskStatuses = async (organizationId?: string | number) => {
 export const createTask = async (formData: FormData) => {
     const supabase = await getSupabase();
 
-    let organizationId: string | number;
-    try {
-        organizationId = await getUserOrganization(supabase);
-    } catch {
-        return { success: false, message: "Unauthorized", data: null };
-    }
 
     const task: Record<string, any> = {
         name: formData.get("name") as string,
-        organization_id: organizationId,
+        project_id: Number(formData.get("project_id")),
         priority: (formData.get("priority") as string) || "medium",
-        position_in_column: Number(formData.get("position_in_column") || 1),
     };
 
-    if (formData.get("status_id")) task.status_id = Number(formData.get("status_id"));
-    if (formData.get("description")) task.description = formData.get("description") as string;
-    if (formData.get("parent_task_id")) task.parent_task_id = Number(formData.get("parent_task_id"));
+    if (formData.has("status_id")) task.status_id = Number(formData.get("status_id"));
+    if (formData.has("description")) task.description = formData.get("description") as string;
+    if (formData.has("parent_task_id")) task.parent_task_id = Number(formData.get("parent_task_id"));
+    if (formData.has("start_date")) task.start_date = formData.get("start_date") as string || null;
+    if (formData.has("end_date")) task.end_date = formData.get("end_date") as string || null;
+    if (formData.has("marked_completed_at")) task.marked_completed_at = formData.get("marked_completed_at") as string || null;
+    if (formData.has("priority")) task.priority = formData.get("priority") as string;
 
     const { data, error } = await supabase
         .from("tasks")
@@ -128,9 +120,11 @@ export const updateTask = async (formData: FormData) => {
 
     if (formData.has("name")) task.name = formData.get("name") as string;
     if (formData.has("status_id")) task.status_id = Number(formData.get("status_id"));
-    if (formData.has("position_in_column")) task.position_in_column = Number(formData.get("position_in_column"));
     if (formData.has("priority")) task.priority = formData.get("priority") as string;
     if (formData.has("description")) task.description = formData.get("description") as string;
+    if (formData.has("start_date")) task.start_date = formData.get("start_date") as string || null;
+    if (formData.has("end_date")) task.end_date = formData.get("end_date") as string || null;
+    if (formData.has("marked_completed_at")) task.marked_completed_at = formData.get("marked_completed_at") as string || null;
 
     const { data, error } = await supabase
         .from("tasks")
@@ -171,8 +165,7 @@ export const deleteTask = async (formData: FormData) => {
  */
 export const assignTaskMember = async (
     taskId: number,
-    memberId: number,
-    role: string = "assignee"
+    memberId: number
 ) => {
     const supabase = await getSupabase();
 
@@ -180,7 +173,7 @@ export const assignTaskMember = async (
     const { data, error } = await supabase
         .from("task_assignees")
         .upsert(
-            [{ task_id: taskId, organization_member_id: memberId, role }],
+            [{ task_id: taskId, organization_member_id: memberId }],
             { onConflict: "task_id,organization_member_id" }
         )
         .select()

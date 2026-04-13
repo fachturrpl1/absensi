@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Info, Loader2 } from "lucide-react"
-import type { Project } from "@/interface"
 
 interface IOrganizationOption {
     id: string
@@ -15,7 +14,7 @@ interface IOrganizationOption {
 type TransferProjectDialogProps = {
     open: boolean
     onOpenChange: (open: boolean) => void
-    project: Project | null
+    project: { name: string } | null
     onTransfer: (organizationId: string) => void
 }
 

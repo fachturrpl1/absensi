@@ -34,6 +34,8 @@ export const getAllProjects = async (organizationId?: number | string) => {
             *,
             organizations(id, name),
             team_projects(team_id, teams(id, name)),
+            client_projects(client_id, clients(id, name)),
+            project_members(id, organization_member_id),
             tasks(count)
         `)
         .eq("organization_id", finalOrgId)
