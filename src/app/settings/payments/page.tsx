@@ -83,6 +83,7 @@ export default function PaymentsPage() {
     { label: "WORK TIME LIMITS", href: "/settings/work-time-limit", active: false },
     { label: "PAYMENTS", href: "/settings/payments", active: true },
     { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: false },
+    { label: "CUSTOM FIELDS", href: "/settings/custom-fields", active: false },
   ]
 
   const sidebarItems: SidebarItem[] = [

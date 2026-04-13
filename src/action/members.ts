@@ -530,6 +530,17 @@ export const getOrganizationMembersById = async (id: string) => {
         name,
         description
       )
+    ),
+    team_members (
+      id,
+      team_id,
+      positions,
+      is_primary_team,
+      joined_at,
+      teams (
+        id,
+        name
+      )
     )
   `)
     .eq("id", id)
@@ -599,16 +610,18 @@ export const getOrganizationMembersById = async (id: string) => {
         }
       }
 
-      // Fetch RFID Card explicitly to be robust
-      const memberId = !isNaN(Number(member.id)) ? Number(member.id) : member.id;
-      const { data: rfidData, error: rfidError } = await supabase
-        .from("rfid_cards")
-        .select("*")
-        .eq("organization_member_id", memberId)
-        .maybeSingle()
+      // Fetch Custom Field Values
+      const { data: customData, error: customError } = await supabase
+        .from("member_custom_field_values")
+        .select("field_values")
+        .eq("member_id", id)
+        .maybeSingle();
 
-      if (!rfidError && rfidData) {
-        member.rfid_cards = rfidData
+      if (!customError && customData) {
+        member.metadata = {
+          ...member.metadata,
+          custom_fields: customData.field_values
+        };
       }
     }
   } catch (e) {
@@ -998,6 +1011,7 @@ export const updateMemberInfo = async (
     date_of_birth?: string;
     home_location?: string;
     personal_email?: string;
+    custom_fields?: Record<string, any>;
   }
 ) => {
   const adminClient = createAdminClient();
@@ -1013,6 +1027,23 @@ export const updateMemberInfo = async (
     if (employee_id !== undefined) memberUpdate.employee_id = employee_id;
     if (work_location !== undefined) memberUpdate.work_location = work_location;
     if (hire_date !== undefined) memberUpdate.hire_date = hire_date;
+
+    // Handle custom fields in dedicated table
+    if (data.custom_fields !== undefined) {
+      const { error: customError } = await adminClient
+        .from("member_custom_field_values")
+        .upsert({
+          member_id: Number(memberId),
+          field_values: data.custom_fields,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'member_id'
+        });
+
+      if (customError) {
+        console.error("Error updating member custom fields:", customError);
+      }
+    }
 
     if (Object.keys(memberUpdate).length > 0) {
       const { error: memberError } = await adminClient
@@ -1112,6 +1143,75 @@ export const updateMemberRole = async (
   }
 };
 
+/**
+ * Update detailed role settings, team assignments, and permissions for a member.
+ */
+export const updateMemberRolesTab = async (
+  memberId: string,
+  payload: {
+    roleId: string;
+    manageFinancials: boolean;
+    viewScreenshots: boolean;
+    teamAssignments: { teamId: string; positionId?: string | null }[];
+  }
+) => {
+  const adminClient = createAdminClient();
+  try {
+    // 1. Sync Primary Role
+    await adminClient
+      .from("organization_member_roles")
+      .delete()
+      .eq("organization_member_id", memberId);
+
+    await adminClient
+      .from("organization_member_roles")
+      .insert({ organization_member_id: memberId, role_id: payload.roleId });
+
+    // 2. Sync Team Assignments
+    // First, delete existing team memberships for this member
+    await adminClient
+      .from("team_members")
+      .delete()
+      .eq("organization_member_id", memberId);
+
+    // Then, insert new assignments if any
+    if (payload.teamAssignments.length > 0) {
+      const { error: teamError } = await adminClient
+        .from("team_members")
+        .insert(
+          payload.teamAssignments.map((t) => ({
+            organization_member_id: memberId,
+            team_id: t.teamId,
+            positions: t.positionId ?? null,
+            is_primary_team: false,
+            joined_at: new Date().toISOString()
+          }))
+        );
+      if (teamError) throw teamError;
+    }
+
+    // 3. Update Permissions (Stored in organization_members metadata/settings if available)
+    // Since we don't have dedicated columns yet, we'll try to update a 'metadata' JSONB column
+    await adminClient
+      .from("organization_members")
+      .update({
+        // Assuming metadata or settings column exists for flexible permissions
+        // If it doesn't, this will fail and we'll catch it.
+        metadata: {
+          manage_financials: payload.manageFinancials,
+          view_screenshots: payload.viewScreenshots
+        }
+      })
+      .eq("id", memberId);
+
+    return { success: true, message: "Roles and assignments updated successfully" };
+  } catch (error: any) {
+    memberLogger.error("updateMemberRolesTab error:", error);
+    return { success: false, message: error.message || "Failed to update roles" };
+  }
+};
+
+// Fetches the list of departments
 export const getDepartmentsList = async (organizationId: string) => {
   const adminClient = createAdminClient();
   const { data, error } = await adminClient

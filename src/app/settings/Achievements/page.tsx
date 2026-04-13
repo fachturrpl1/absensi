@@ -190,6 +190,7 @@ export default function EfficiencyProPage() {
         { label: "WORK TIME LIMITS", href: "/settings/work-time-limit", active: false },
         { label: "PAYMENTS", href: "/settings/payments", active: false },
         { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: true },
+        { label: "CUSTOM FIELDS", href: "/settings/custom-fields", active: false },
     ]
 
     const sidebarItems = [

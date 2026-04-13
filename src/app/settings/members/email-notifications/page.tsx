@@ -56,12 +56,12 @@ export default function EmailNotificationsPage() {
   if (loading && !organizationId) {
     return null
   }
-
   const tabs: SettingTab[] = [
     { label: "EMAIL NOTIFICATIONS", href: "/settings/members/email-notifications", active: true },
     { label: "WORK TIME LIMITS", href: "/settings/work-time-limit", active: false },
     { label: "PAYMENTS", href: "/settings/payments", active: false },
     { label: "ACHIEVEMENTS", href: "/settings/Achievements", active: false },
+    { label: "CUSTOM FIELDS", href: "/settings/custom-fields", active: false },
   ]
 
   const sidebarItems: SidebarItem[] = [

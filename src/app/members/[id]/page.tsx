@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, use } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import {
   Mail,
@@ -12,7 +13,9 @@ import {
   Plus,
   HelpCircle,
   Search,
+  Settings,
 } from "lucide-react"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 interface ICountry {
   code: string;
@@ -66,13 +69,14 @@ import {
   getOrganizationMembersById,
   updateMemberInfo,
   updateMemberEmployment,
-  updateMemberRole,
+  updateMemberRolesTab,
   getDepartmentsList,
   getPositionsList,
 } from "@/action/members"
 import { getAllRole } from "@/action/role"
 import { getProjectNames } from "@/action/projects"
 import { getTeams } from "@/action/teams"
+import { getCustomFieldDefinitions, type ICustomFieldDefinition } from "@/action/custom-fields"
 import { requestPasswordReset } from "@/action/users"
 import { PageSkeleton } from "@/components/ui/loading-skeleton"
 import { toast } from "sonner"
@@ -258,6 +262,16 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
   // Form state - Roles tab
   const [selectedRoleId, setSelectedRoleId] = useState<string>("")
+  const [manageFinancials, setManageFinancials] = useState(false)
+  const [viewScreenshots, setViewScreenshots] = useState(true)
+  const [trackableProjectIds, setTrackableProjectIds] = useState<string[]>([])
+  const [managedProjectIds, setManagedProjectIds] = useState<string[]>([])
+  const [memberTeamIds, setMemberTeamIds] = useState<string[]>([])
+  const [teamPositionIds, setTeamPositionIds] = useState<string[]>([])
+
+  // Custom Fields State
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState<ICustomFieldDefinition[]>([])
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({})
 
   // Fetch Countries from RestCountries API (with Static Fallback)
   useEffect(() => {
@@ -368,6 +382,30 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           const currentRoleId = m.role?.id || m.role_id || ""
           setSelectedRoleId(String(currentRoleId))
 
+          // Set permissions from metadata
+          const metadata = (m as any).metadata || {}
+          setManageFinancials(!!metadata.manage_financials)
+          setViewScreenshots(!!metadata.view_screenshots)
+
+          // Set team assignments
+          const teamMembers = (m as any).team_members || []
+          const mTeamIds: string[] = []
+          const mPosIds: string[] = []
+
+          teamMembers.forEach((tm: any) => {
+            mTeamIds.push(String(tm.team_id))
+            // Load position in team from team member entries correctly, handling comma separated values
+            if (tm.positions) {
+              const posArray = String(tm.positions).split(',');
+              posArray.forEach(p => {
+                const trimmed = p.trim();
+                if (trimmed && !mPosIds.includes(trimmed)) mPosIds.push(trimmed);
+              })
+            }
+          })
+          setMemberTeamIds(mTeamIds)
+          setTeamPositionIds(mPosIds)
+
           // Fetch dropdown data using organization_id from member
           const orgId = String(m.organization_id)
           const [rolesRes, deptRes, posRes, projRes, teamsRes] = await Promise.all([
@@ -383,6 +421,14 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           if (posRes.success) setAllPositions(posRes.data)
           if (projRes.success) setAllProjects(projRes.data)
           if (teamsRes.success) setAllTeams(teamsRes.data as { id: number; name: string }[])
+
+          // Fetch Custom Field Definitions
+          const cfDefs = await getCustomFieldDefinitions(orgId)
+          setCustomFieldDefinitions(cfDefs)
+
+          // Set Initial Values from member metadata
+          const mMetadata = (m as any).metadata || {}
+          setCustomFieldValues(mMetadata.custom_fields || {})
 
         } else {
           toast.error(`Fetch failed for ID ${id}: ${memberRes.message || 'Unknown error'}`)
@@ -451,6 +497,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
           home_location: formData.home_location || undefined,
           personal_email: formData.personal_email || undefined,
           date_of_birth,
+          custom_fields: customFieldValues,
         })
 
         // Also update work_location in organization_members since it's in the Contact section
@@ -490,9 +537,23 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
         else toast.error(res.message || "Failed to save employment data")
       } else if (activeTab === "roles") {
         if (!selectedRoleId) { toast.error("Please select a role"); return }
-        const res = await updateMemberRole(String(member.id), selectedRoleId)
-        if (res.success) toast.success("Role updated successfully")
-        else toast.error(res.message || "Failed to update role")
+        
+        // Collect all team assignments with position
+        const positionString = teamPositionIds.length > 0 ? teamPositionIds.join(',') : null
+        const teamAssignments: { teamId: string; positionId: string | null }[] = memberTeamIds.map((id) => ({
+          teamId: id,
+          positionId: positionString,
+        }))
+
+        const res = await updateMemberRolesTab(String(member.id), {
+          roleId: selectedRoleId,
+          manageFinancials,
+          viewScreenshots,
+          teamAssignments,
+        })
+
+        if (res.success) toast.success("Roles updated successfully")
+        else toast.error(res.message || "Failed to update roles")
       }
     } catch (err) {
       toast.error("An unexpected error occurred")
@@ -568,8 +629,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-
-              <Button className="bg-black hover:bg-slate-800 text-white h-10 px-6 rounded-md transition-colors shadow-sm" onClick={handleSave} disabled={isSaving}>
+              <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save"}
               </Button>
             </div>
@@ -910,6 +970,39 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
               </div>
 
             </div>
+
+            {/* Custom Fields Section */}
+            {customFieldDefinitions.length > 0 && (
+              <div className="space-y-6 pt-10 mt-10 border-t border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-medium text-slate-800">Custom fields</h2>
+                    <Info className="w-3.5 h-3.5 text-slate-400" />
+                  </div>
+                  <Link 
+                    href="/settings/custom-fields"
+                    className="text-sm font-medium text-primary hover:underline transition-all"
+                  >
+                    Manage custom fields
+                  </Link>
+                </div>
+                
+                <div className="grid gap-x-8 gap-y-6 md:grid-cols-2 mt-4">
+                  {customFieldDefinitions.map((field) => (
+                    <div key={field.id} className="space-y-2">
+                      <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{field.label}</Label>
+                      <Input
+                        type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                        placeholder={`Enter ${field.label.toLowerCase()}`}
+                        className="h-11 border-slate-200 focus:ring-slate-200 transition-all"
+                        value={customFieldValues[field.id] || ""}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1075,72 +1168,200 @@ export default function MemberProfilePage({ params }: { params: Promise<{ id: st
 
         {/* ROLES TAB */}
         {activeTab === "roles" && (
-          <div className="space-y-12 animate-in fade-in duration-500">
+          <div className="space-y-10 animate-in fade-in duration-500 max-w-4xl pt-2">
+            {/* Role Header */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">ROLE *</Label>
-                <button className="text-xs text-primary hover:underline">Learn more</button>
+              <div className="flex items-center justify-between w-[320px]">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                  ROLE <span className="text-red-500">*</span>
+                </Label>
+                <button className="text-[12px] text-primary hover:underline transition-all">Learn more</button>
               </div>
-              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                <SelectTrigger className="w-full h-12 border-slate-200 bg-white">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allRoles.map(role => (
-                    <SelectItem key={role.id} value={String(role.id)}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-[320px]">
+                <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                  <SelectTrigger className="w-full h-10 border-slate-300 bg-white hover:border-primary/40 focus:ring-primary transition-all text-slate-700">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allRoles.map(role => (
+                      <SelectItem key={role.id} value={String(role.id)} className="py-2">
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="grid gap-12 md:grid-cols-2">
+            {/* Permissions Box */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between w-full max-w-2xl">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                  PERMISSIONS
+                </Label>
+                <button className="text-[12px] text-primary hover:underline flex items-center gap-1 transition-all">
+                  <Settings className="h-3 w-3" />
+                  Role permissions
+                </button>
+              </div>
+              <div className="max-w-2xl border border-slate-200 rounded-md overflow-hidden bg-white">
+                <div className="flex items-center justify-between p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[13px] font-medium text-slate-700 cursor-pointer" htmlFor="perm-financials">
+                      Manage Financials (Default)
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>Allows this member to manage payments, rates and budgets.</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Switch 
+                    id="perm-financials"
+                    checked={manageFinancials} 
+                    onCheckedChange={setManageFinancials}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
+                <div className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[13px] font-medium text-slate-700 cursor-pointer" htmlFor="perm-screenshots">
+                      View screenshots/activities for other members (Default)
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>Allows this member to view activity data for others.</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Switch 
+                    id="perm-screenshots"
+                    checked={viewScreenshots} 
+                    onCheckedChange={setViewScreenshots}
+                    className="data-[state=checked]:bg-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Projects and Teams Grid */}
+            <div className="grid gap-12 md:grid-cols-2 pt-4">
+              {/* Projects Column */}
               <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <Label className="text-[14px] font-semibold text-slate-800">Projects</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>Project assignments and management rights</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                
+                {/* Trackable Projects */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Projects</Label>
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </div>
+                    <Label className="text-[12px] font-medium text-slate-600">Able to track time on these projects</Label>
+                    <button 
+                      onClick={() => setTrackableProjectIds(allProjects.map(p => String(p.id)))}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      Select all
+                    </button>
                   </div>
-                  <p className="text-xs text-slate-500 mb-2">Able to track time on these projects</p>
-                  {allProjects.length > 0 ? (
-                    <div className="border border-slate-200 rounded-md divide-y max-h-60 overflow-y-auto">
-                      {allProjects.map(proj => (
-                        <div key={proj.id} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700">
-                          <div className="w-2 h-2 rounded-full bg-slate-400" />
-                          {proj.name}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400">No projects found</p>
-                  )}
+                  <MultiSelect
+                    placeholder="Choose projects..."
+                    options={allProjects.map(p => ({ label: p.name, value: String(p.id) }))}
+                    selected={trackableProjectIds}
+                    onChange={setTrackableProjectIds}
+                    className="[&_.bg-secondary]:bg-primary/10 [&_.bg-secondary]:text-primary [&_.bg-secondary]:hover:bg-primary/20 [&_.bg-secondary]:border-none [&_.bg-secondary]:rounded"
+                  />
+                </div>
+
+                {/* Managed Projects */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[12px] font-medium text-slate-600">Manages these projects as <span className="font-bold">Project manager</span></Label>
+                    <button 
+                      onClick={() => setManagedProjectIds(allProjects.map(p => String(p.id)))}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      Select all
+                    </button>
+                  </div>
+                  <MultiSelect
+                    placeholder="Choose projects..."
+                    options={allProjects.map(p => ({ label: p.name, value: String(p.id) }))}
+                    selected={managedProjectIds}
+                    onChange={setManagedProjectIds}
+                    className="[&_.bg-secondary]:bg-primary/10 [&_.bg-secondary]:text-primary [&_.bg-secondary]:hover:bg-primary/20 [&_.bg-secondary]:border-none [&_.bg-secondary]:rounded"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    Organization Owners and Organization Managers can manage all projects by default
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-8">
-                <div className="space-y-4">
+              {/* Teams Column */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 pb-1 border-b border-slate-200">
+                  <Label className="text-[14px] font-semibold text-slate-800">Teams</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>Team memberships and leadership roles</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                {/* Member Teams */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Teams</Label>
-                      <Info className="h-3 w-3 text-muted-foreground" />
-                    </div>
+                    <Label className="text-[12px] font-medium text-slate-600">Teams they belong to</Label>
+                    <button 
+                      onClick={() => setMemberTeamIds(allTeams.map(t => String(t.id)))}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      Select all
+                    </button>
                   </div>
-                  <p className="text-xs text-slate-500 mb-2">Member in these teams</p>
-                  {allTeams.length > 0 ? (
-                    <div className="border border-slate-200 rounded-md divide-y max-h-60 overflow-y-auto">
-                      {allTeams.map(team => (
-                        <div key={team.id} className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700">
-                          <div className="w-2 h-2 rounded-full bg-slate-300" />
-                          {team.name}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400">No teams found</p>
-                  )}
+                  <MultiSelect
+                    placeholder="Choose teams..."
+                    options={allTeams.map(t => ({ label: t.name, value: String(t.id) }))}
+                    selected={memberTeamIds}
+                    onChange={setMemberTeamIds}
+                    className="[&_.bg-secondary]:bg-primary/10 [&_.bg-secondary]:text-primary [&_.bg-secondary]:hover:bg-primary/20 [&_.bg-secondary]:border-none [&_.bg-secondary]:rounded"
+                  />
+                </div>
+
+                {/* Position in team */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[12px] font-medium text-slate-600">Position in team</Label>
+                    <button 
+                      onClick={() => setTeamPositionIds(allPositions.map(p => String(p.id)))}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      Select all
+                    </button>
+                  </div>
+                  <MultiSelect
+                    placeholder="Choose position..."
+                    options={allPositions.map(p => ({ label: p.title, value: String(p.id) }))}
+                    selected={teamPositionIds}
+                    onChange={setTeamPositionIds}
+                    className="[&_.bg-secondary]:bg-primary/10 [&_.bg-secondary]:text-primary [&_.bg-secondary]:hover:bg-primary/20 [&_.bg-secondary]:border-none [&_.bg-secondary]:rounded"
+                  />
                 </div>
               </div>
             </div>

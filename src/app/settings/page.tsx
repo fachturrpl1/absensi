@@ -91,6 +91,7 @@ export default function SettingsPage() {
         { label: 'Work time limits', href: '/settings/work-time-limit' },
         { label: 'Payments', href: '/settings/payments' },
         { label: 'Achievements', href: '/settings/Achievements' },
+        { label: 'Custom fields', href: '/settings/custom-fields' },
       ],
     },
     {
