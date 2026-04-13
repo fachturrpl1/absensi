@@ -231,6 +231,7 @@ export const createProject = async (
             start_date: payload.start_date ?? null,
             end_date: payload.end_date ?? null,
             lifecycle_status: payload.lifecycle_status ?? "active",
+            is_archived: payload.is_archived ?? false,
             metadata: payload.metadata ?? {},
         })
         .select()
@@ -258,6 +259,7 @@ export const updateProject = async (id: number, payload: UpdateProjectPayload) =
     if (payload.start_date !== undefined)       updateData.start_date       = payload.start_date;
     if (payload.end_date !== undefined)         updateData.end_date         = payload.end_date;
     if (payload.lifecycle_status !== undefined) updateData.lifecycle_status = payload.lifecycle_status;
+    if (payload.is_archived !== undefined)      updateData.is_archived      = payload.is_archived;
     if (payload.metadata !== undefined)         updateData.metadata         = payload.metadata;
     updateData.updated_at = new Date().toISOString();
 
@@ -350,7 +352,7 @@ export const getSimpleMembersForDropdown = async (
 export interface ProjectMemberRow {
     id: number;
     organization_member_id: number;
-    role: "manager" | "lead" | "member" | "viewer";
+    role: string;
     hourly_rate: number | null;
     joined_at: string;
     name: string;
@@ -416,7 +418,7 @@ export const getProjectMembers = async (
 export const addProjectMember = async (
     projectId: number,
     organizationMemberId: number,
-    role: "manager" | "lead" | "member" | "viewer" = "member"
+    role: string = "member"
 ): Promise<{ success: boolean; message?: string }> => {
     const supabase = await createClient();
 
@@ -447,7 +449,7 @@ export const removeProjectMember = async (
 export const updateProjectMemberRole = async (
     projectId: number,
     organizationMemberId: number,
-    role: "manager" | "lead" | "member" | "viewer"
+    role: string
 ): Promise<{ success: boolean; message?: string }> => {
     const supabase = await createClient();
 

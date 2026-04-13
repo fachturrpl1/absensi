@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import { Search, X, Users, UserPlus, Loader2 } from "lucide-react"
-import type { ITeams, ISimpleMember, NewProjectForm } from "@/interface"
+import { Search, X, Users, UserPlus, Loader2, ArchiveX, Archive } from "lucide-react"
+import type { ITeams, ISimpleMember, NewProjectForm, IPositions } from "@/interface"
 import type { ProjectRow } from "@/app/projects/page"
 import {
   getProjectMembers, getProjectTeams,
@@ -23,6 +23,8 @@ import {
   addProjectTeam, removeProjectTeam,
   type ProjectMemberRow, type ProjectTeamRow,
 } from "@/action/projects"
+import { getAllPositions } from "@/action/position"
+import { useOrgStore } from "@/store/org-store"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -36,15 +38,8 @@ const STATUS_OPTIONS = [
   { value: "active",    label: "Active" },
   { value: "on_hold",   label: "On Hold" },
   { value: "completed", label: "Completed" },
-  { value: "archived",  label: "Archived" },
 ]
 
-const ROLE_OPTIONS: { value: "manager" | "lead" | "member" | "viewer"; label: string }[] = [
-  { value: "manager", label: "Manager" },
-  { value: "lead",    label: "Lead" },
-  { value: "member",  label: "Member" },
-  { value: "viewer",  label: "Viewer" },
-]
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +64,7 @@ function GeneralTab({ form, onChange, mode }: {
 }) {
   return (
     <div className="space-y-4">
+      {/* Project Name */}
       <div className="space-y-1.5">
         <Label htmlFor="proj-name" className="text-sm font-medium">
           Project Name <span className="text-destructive">*</span>
@@ -95,6 +91,7 @@ function GeneralTab({ form, onChange, mode }: {
         )}
       </div>
 
+      {/* Description */}
       <div className="space-y-1.5">
         <Label htmlFor="proj-desc" className="text-sm font-medium">Description</Label>
         <Textarea
@@ -107,10 +104,14 @@ function GeneralTab({ form, onChange, mode }: {
         />
       </div>
 
+      {/* Priority & Status */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Priority</Label>
-          <Select value={form.priority} onValueChange={val => onChange({ priority: val as "high" | "medium" | "low" })}>
+          <Select
+            value={form.priority}
+            onValueChange={val => onChange({ priority: val as "high" | "medium" | "low" })}
+          >
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               {PRIORITY_OPTIONS.map(o => (
@@ -126,7 +127,11 @@ function GeneralTab({ form, onChange, mode }: {
         </div>
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Status</Label>
-          <Select value={form.lifecycleStatus} onValueChange={val => onChange({ lifecycleStatus: val })}>
+          {/* Hanya status operasional, tanpa "archived" */}
+          <Select
+            value={form.lifecycleStatus}
+            onValueChange={val => onChange({ lifecycleStatus: val })}
+          >
             <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map(o => (
@@ -137,17 +142,24 @@ function GeneralTab({ form, onChange, mode }: {
         </div>
       </div>
 
+      {/* Start & End Date */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="start-date" className="text-sm font-medium">Start Date</Label>
-          <Input id="start-date" type="date" className="h-9"
+          <Input
+            id="start-date"
+            type="date"
+            className="h-9"
             value={form.startDate ?? ""}
             onChange={e => onChange({ startDate: e.target.value || null })}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="end-date" className="text-sm font-medium">End Date</Label>
-          <Input id="end-date" type="date" className="h-9"
+          <Input
+            id="end-date"
+            type="date"
+            className="h-9"
             value={form.endDate ?? ""}
             min={form.startDate ?? undefined}
             onChange={e => onChange({ endDate: e.target.value || null })}
@@ -158,13 +170,56 @@ function GeneralTab({ form, onChange, mode }: {
         </div>
       </div>
 
+      {/* Billable toggle */}
       <div className="flex items-center justify-between rounded-lg border px-4 py-3">
         <div>
           <p className="text-sm font-medium">Billable</p>
           <p className="text-xs text-muted-foreground">Track billable hours and costs.</p>
         </div>
-        <Switch checked={form.billable} onCheckedChange={val => onChange({ billable: val })} />
+        <Switch
+          checked={form.billable}
+          onCheckedChange={val => onChange({ billable: val })}
+        />
       </div>
+      {mode === "edit" && (
+        <div
+          className={cn(
+            "flex items-center justify-between rounded-lg border px-4 py-3 transition-colors",
+            form.isArchived
+              ? "border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20"
+              : "border-border"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {form.isArchived
+              ? <ArchiveX className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              : <Archive className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            }
+            <div>
+              <p className={cn(
+                "text-sm font-medium",
+                form.isArchived && "text-amber-700 dark:text-amber-400"
+              )}>
+                {form.isArchived ? "Project Archived" : "Archive Project"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {form.isArchived
+                  ? "Project is hidden from the active list. Status is preserved."
+                  : "Hide from active list without changing the project status."
+                }
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={form.isArchived ?? false}
+            onCheckedChange={val => onChange({ isArchived: val })}
+            className={cn(
+              form.isArchived &&
+              "data-[state=checked]:bg-amber-500 dark:data-[state=checked]:bg-amber-600"
+            )}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -175,20 +230,27 @@ function MembersTab({ projectId, allMembers }: {
   projectId: number | null
   allMembers: ISimpleMember[]
 }) {
-  const [assigned, setAssigned]       = useState<ProjectMemberRow[]>([])
-  const [loading, setLoading]         = useState(false)
-  const [search, setSearch]           = useState("")
-  const [adding, setAdding]           = useState<number | null>(null)
-  const [removing, setRemoving]       = useState<number | null>(null)
+  const [assigned, setAssigned]         = useState<ProjectMemberRow[]>([])
+  const [loading, setLoading]           = useState(false)
+  const [search, setSearch]             = useState("")
+  const [adding, setAdding]             = useState<number | null>(null)
+  const [removing, setRemoving]         = useState<number | null>(null)
   const [roleChanging, setRoleChanging] = useState<number | null>(null)
+
+  const [positions, setPositions]       = useState<IPositions[]>([])
+  const { organizationId } = useOrgStore()
 
   const load = useCallback(async () => {
     if (!projectId) return
     setLoading(true)
-    const res = await getProjectMembers(projectId)
-    if (res.success) setAssigned(res.data)
+    const [resMembers, resPos] = await Promise.all([
+      getProjectMembers(projectId),
+      organizationId ? getAllPositions(organizationId) : Promise.resolve({ success: true, data: [] })
+    ])
+    if (resMembers.success) setAssigned(resMembers.data)
+    if (resPos.success) setPositions(resPos.data as IPositions[])
     setLoading(false)
-  }, [projectId])
+  }, [projectId, organizationId])
 
   useEffect(() => { load() }, [load])
 
@@ -203,7 +265,7 @@ function MembersTab({ projectId, allMembers }: {
   }
 
   const assignedIds = new Set(assigned.map(m => m.organization_member_id))
-  const available = allMembers.filter(m =>
+  const available   = allMembers.filter(m =>
     !assignedIds.has(Number(m.id)) &&
     m.name.toLowerCase().includes(search.toLowerCase())
   )
@@ -222,7 +284,10 @@ function MembersTab({ projectId, allMembers }: {
     setRemoving(null)
   }
 
-  const handleRoleChange = async (memberId: number, role: "manager" | "lead" | "member" | "viewer") => {
+  const handleRoleChange = async (
+    memberId: number,
+    role: string
+  ) => {
     setRoleChanging(memberId)
     await updateProjectMemberRole(projectId, memberId, role)
     await load()
@@ -231,7 +296,6 @@ function MembersTab({ projectId, allMembers }: {
 
   return (
     <div className="space-y-4">
-      {/* Assigned */}
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
           Assigned ({assigned.length})
@@ -250,16 +314,22 @@ function MembersTab({ projectId, allMembers }: {
                 <span className="text-sm flex-1 truncate min-w-0">{m.name}</span>
                 <Select
                   value={m.role}
-                  onValueChange={val => handleRoleChange(m.organization_member_id, val as "manager" | "lead" | "member" | "viewer")}
+                  onValueChange={val =>
+                    handleRoleChange(m.organization_member_id, val)
+                  }
                   disabled={roleChanging === m.organization_member_id}
                 >
                   <SelectTrigger className="h-7 w-[90px] text-xs border border-border/60 bg-transparent px-2 gap-1 shrink-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLE_OPTIONS.map(r => (
-                      <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
-                    ))}
+                    {positions.length === 0 ? (
+                      <SelectItem value={m.role} disabled>{m.role}</SelectItem>
+                    ) : (
+                      positions.map(p => (
+                        <SelectItem key={p.id} value={p.title} className="text-xs">{p.title}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 <button
@@ -279,22 +349,32 @@ function MembersTab({ projectId, allMembers }: {
 
       <div className="border-t" />
 
-      {/* Add */}
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Add Members</p>
         <div className="relative mb-2">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+          <Input
+            placeholder="Search…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
         </div>
         <div className="space-y-1 max-h-44 overflow-y-auto pr-0.5">
           {available.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2 text-center">{search ? "No results" : "All members assigned"}</p>
+            <p className="text-sm text-muted-foreground py-2 text-center">
+              {search ? "No results" : "All members assigned"}
+            </p>
           ) : available.map(m => (
             <div key={m.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
               <Avatar name={m.name} />
               <span className="text-sm flex-1 truncate min-w-0">{m.name}</span>
-              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs shrink-0"
-                disabled={adding === Number(m.id)} onClick={() => handleAdd(Number(m.id))}>
+              <Button
+                size="sm" variant="outline"
+                className="h-7 px-2.5 text-xs shrink-0"
+                disabled={adding === Number(m.id)}
+                onClick={() => handleAdd(Number(m.id))}
+              >
                 {adding === Number(m.id) ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
               </Button>
             </div>
@@ -338,7 +418,7 @@ function TeamsTab({ projectId, allTeams }: {
   }
 
   const assignedIds = new Set(assigned.map(t => t.team_id))
-  const available = allTeams.filter(t =>
+  const available   = allTeams.filter(t =>
     t.is_active &&
     !assignedIds.has(t.id) &&
     t.name.toLowerCase().includes(search.toLowerCase())
@@ -360,7 +440,6 @@ function TeamsTab({ projectId, allTeams }: {
 
   return (
     <div className="space-y-4">
-      {/* Assigned */}
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
           Assigned Teams ({assigned.length})
@@ -399,16 +478,22 @@ function TeamsTab({ projectId, allTeams }: {
 
       <div className="border-t" />
 
-      {/* Add */}
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Add Teams</p>
         <div className="relative mb-2">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Search teams…" value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-sm" />
+          <Input
+            placeholder="Search teams…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
         </div>
         <div className="space-y-1 max-h-44 overflow-y-auto pr-0.5">
           {available.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2 text-center">{search ? "No results" : "All teams assigned"}</p>
+            <p className="text-sm text-muted-foreground py-2 text-center">
+              {search ? "No results" : "All teams assigned"}
+            </p>
           ) : available.map(t => (
             <div key={t.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
               <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -416,10 +501,16 @@ function TeamsTab({ projectId, allTeams }: {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm truncate">{t.name}</p>
-                {t.description && <p className="text-xs text-muted-foreground truncate">{t.description}</p>}
+                {t.description && (
+                  <p className="text-xs text-muted-foreground truncate">{t.description}</p>
+                )}
               </div>
-              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs shrink-0"
-                disabled={adding === t.id} onClick={() => handleAdd(t.id)}>
+              <Button
+                size="sm" variant="outline"
+                className="h-7 px-2.5 text-xs shrink-0"
+                disabled={adding === t.id}
+                onClick={() => handleAdd(t.id)}
+              >
                 {adding === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
               </Button>
             </div>
@@ -454,16 +545,17 @@ export default function ManageProjectDialog({
 
   useEffect(() => { setActiveTab(initialTab) }, [initialTab, open])
 
-  const handleChange = (updated: Partial<NewProjectForm>) => onFormChange({ ...form, ...updated })
+  const handleChange = (updated: Partial<NewProjectForm>) =>
+    onFormChange({ ...form, ...updated })
 
   const handleSave = async () => {
     setIsSaving(true)
     try { await onSave(form) } finally { setIsSaving(false) }
   }
 
-  const projectId = project ? Number(project.id) : null
+  const projectId  = project ? Number(project.id) : null
   const isFormValid = form.names.trim().length > 0
-  const showFooter = activeTab === "general" || activeTab === "budget"
+  const showFooter  = activeTab === "general" || activeTab === "budget"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -512,13 +604,21 @@ export default function ManageProjectDialog({
           </div>
         </Tabs>
 
-        {/* Footer — only on tabs that have a save action */}
+        {/* Footer */}
         {showFooter && (
           <DialogFooter className="px-5 py-3.5 border-t shrink-0 flex-row gap-2 sm:justify-end">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isSaving}>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+            >
               Cancel
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!isFormValid || isSaving}>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!isFormValid || isSaving}
+            >
               {isSaving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               {isSaving ? "Saving…" : mode === "add" ? "Create" : "Save"}
             </Button>

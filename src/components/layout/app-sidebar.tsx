@@ -166,7 +166,7 @@ const getSidebarGroups = (): NavGroup[] => [
         ],
       },
       {
-        title: 'Project management',
+        title: 'Project Management',
         icon: Folder,
         subItems: [
           { title: 'Projects', url: '/projects', icon: Folder },

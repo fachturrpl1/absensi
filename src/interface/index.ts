@@ -306,6 +306,7 @@ export interface CreateProjectPayload {
     description?: string | null;
     priority?: string | null;
     lifecycle_status?: string;
+    is_archived?: boolean;
     is_billable?: boolean;
     start_date?: string | null;
     end_date?: string | null;
@@ -318,6 +319,7 @@ export interface UpdateProjectPayload {
     description?: string | null;
     priority?: string | null;
     lifecycle_status?: string;
+    is_archived?: boolean;
     is_billable?: boolean;
     start_date?: string | null;
     end_date?: string | null;
@@ -342,6 +344,7 @@ export interface NewProjectForm {
     description: string;
     priority: "high" | "medium" | "low";
     lifecycleStatus: string;
+    isArchived: boolean;
     // Dates
     startDate: string | null;
     endDate: string | null;

@@ -18,11 +18,10 @@ import { ProjectRow } from "@/app/projects/page"
 
 const PriorityBadge = ({ priority }: { priority: string | null }) => {
   const colors: Record<string, string> = {
-    high: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    high:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
     medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    low: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    low:    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   }
-  
   return (
     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${priority ? colors[priority] : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
       {priority || "None"}
@@ -30,32 +29,58 @@ const PriorityBadge = ({ priority }: { priority: string | null }) => {
   )
 }
 
+// ─── STATUS BADGE ────────────────────────────────────────────────────────────
+// Hanya menampilkan lifecycle_status operasional (active, on_hold, completed).
+// "archived" TIDAK akan muncul di sini karena tab archived menggunakan is_archived,
+// bukan lifecycle_status. Namun tetap ada fallback jika data tidak terduga.
+const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
+  active: {
+    label: "Active",
+    className:
+      "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-50 " +
+      "dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50",
+  },
+  on_hold: {
+    label: "On Hold",
+    className:
+      "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-50 " +
+      "dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50",
+  },
+  completed: {
+    label: "Completed",
+    className:
+      "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-50 " +
+      "dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50",
+  },
+  archived: {
+    label: "Archived",
+    className:
+      "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 " +
+      "dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700",
+  },
+}
+
 const StatusBadge = ({ status }: { status: string }) => {
-  const isActive = status.toLowerCase() === "active"
-
-  if (isActive) {
-    return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-600 dark:bg-green-600 text-white capitalize">
-        {status.replace("_", " ")}
-      </span>
-    )
+  const config = STATUS_CONFIG[status] ?? {
+    label: status.replace(/_/g, " "),
+    className:
+      "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-100 " +
+      "dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700",
   }
-
-  // Fallback for inactive, archived, on_hold
   return (
-    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-300 dark:bg-gray-700 text-black dark:text-gray-200 capitalize">
-      {status.replace("_", " ")}
-    </span>
+    <Badge variant="outline" className={`font-medium capitalize ${config.className}`}>
+      {config.label}
+    </Badge>
   )
 }
+// ────────────────────────────────────────────────────────────────────────────
 
 const SortIcon = ({ field, current, dir }: { field: string; current: string; dir: string }) => {
   if (field !== current) return null
   return <span className="ml-1">{dir === "asc" ? "↑" : "↓"}</span>
 }
 
-// ─── Props Interface (Synced with page.tsx) ──────────────────────────────────
-
+// ─── Props Interface ─────────────────────────────────────────────────────────
 interface TableProjectsProps {
   isLoading: boolean
   fetchError: string | null
@@ -83,13 +108,13 @@ export function ProjectsTable(props: TableProjectsProps) {
     isLoading, fetchError, data, selectedIds, allSelected,
     isAdmin, sortField, sortDir, activeFilterCount,
     onSort, onToggleSelectAll, onToggleSelect, onClearFilters, onRowClick,
-    onEdit, onArchive, onRestore, onDelete, onTransfer
+    onEdit, onArchive, onRestore, onDelete, onTransfer,
   } = props
 
   const formatDate = (date: string | null) => {
     if (!date) return "-"
-    return new Date(date).toLocaleDateString("id-ID", { 
-        day: "numeric", month: "short", year: "numeric" 
+    return new Date(date).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric",
     })
   }
 
@@ -104,10 +129,18 @@ export function ProjectsTable(props: TableProjectsProps) {
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             <TableHead className="w-10">
-              <input type="checkbox" checked={allSelected} onChange={onToggleSelectAll} className="rounded border-gray-300" />
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={onToggleSelectAll}
+                className="rounded border-gray-300"
+              />
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("name")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("name")}
+              >
                 Name <SortIcon field="name" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
@@ -115,12 +148,19 @@ export function ProjectsTable(props: TableProjectsProps) {
               <span className="text-xs font-medium uppercase tracking-wide">Description</span>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("priority")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("priority")}
+              >
                 Priority <SortIcon field="priority" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("lifecycleStatus")}>
+              {/* ─ Fix: typo "lifecycle\nStatus" diperbaiki menjadi "lifecycleStatus" ─ */}
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("lifecycleStatus")}
+              >
                 Status <SortIcon field="lifecycleStatus" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
@@ -128,22 +168,34 @@ export function ProjectsTable(props: TableProjectsProps) {
               <span className="text-xs font-medium uppercase tracking-wide">Billable</span>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("budgetAmount")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("budgetAmount")}
+              >
                 Budget <SortIcon field="budgetAmount" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("startDate")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("startDate")}
+              >
                 Start Date <SortIcon field="startDate" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("endDate")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("endDate")}
+              >
                 End Date <SortIcon field="endDate" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
             <TableHead>
-              <button className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground" onClick={() => onSort("createdAt")}>
+              <button
+                className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide hover:text-foreground"
+                onClick={() => onSort("createdAt")}
+              >
                 Created At <SortIcon field="createdAt" current={sortField} dir={sortDir} />
               </button>
             </TableHead>
@@ -167,7 +219,10 @@ export function ProjectsTable(props: TableProjectsProps) {
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-sm font-medium">No projects found</span>
                     {activeFilterCount > 0 && (
-                      <button className="text-xs text-primary underline underline-offset-4" onClick={onClearFilters}>
+                      <button
+                        className="text-xs text-primary underline underline-offset-4"
+                        onClick={onClearFilters}
+                      >
                         Clear filters
                       </button>
                     )}
@@ -178,16 +233,19 @@ export function ProjectsTable(props: TableProjectsProps) {
           ) : (
             data.map(p => {
               const notStarted = isBeforeStartDate(p.startDate)
-              const readOnly = notStarted && !isAdmin
+              const readOnly   = notStarted && !isAdmin
 
               return (
                 <TableRow
                   key={p.id}
                   className={`transition-colors ${
-                    readOnly ? "opacity-60 cursor-not-allowed bg-muted/20" : "cursor-pointer hover:bg-muted/40"
+                    readOnly
+                      ? "opacity-60 cursor-not-allowed bg-muted/20"
+                      : "cursor-pointer hover:bg-muted/40"
                   }`}
                   onClick={() => onRowClick(p)}
                 >
+                  {/* Checkbox */}
                   <TableCell onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -198,6 +256,7 @@ export function ProjectsTable(props: TableProjectsProps) {
                     />
                   </TableCell>
 
+                  {/* Name */}
                   <TableCell className="max-w-[180px]">
                     <div className="flex items-center gap-1.5">
                       {readOnly ? (
@@ -225,7 +284,10 @@ export function ProjectsTable(props: TableProjectsProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span>
-                              <Badge variant="outline" className="text-[10px] gap-1 border-orange-300 text-orange-600 bg-orange-50 shrink-0">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] gap-1 border-orange-300 text-orange-600 bg-orange-50 shrink-0"
+                              >
                                 <CalendarClock className="h-3 w-3" />
                                 Not started
                               </Badge>
@@ -240,6 +302,7 @@ export function ProjectsTable(props: TableProjectsProps) {
                     </div>
                   </TableCell>
 
+                  {/* Description */}
                   <TableCell className="max-w-[200px]">
                     {p.description ? (
                       <Tooltip>
@@ -259,42 +322,61 @@ export function ProjectsTable(props: TableProjectsProps) {
                     )}
                   </TableCell>
 
-                  <TableCell><PriorityBadge priority={p.priority} /></TableCell>
-                  <TableCell><StatusBadge status={p.lifecycleStatus} /></TableCell>
+                  {/* Priority */}
+                  <TableCell>
+                    <PriorityBadge priority={p.priority} />
+                  </TableCell>
 
+                  {/* Status — murni lifecycle_status, tidak bercampur is_archived */}
+                  <TableCell>
+                    <StatusBadge status={p.lifecycleStatus} />
+                  </TableCell>
+
+                  {/* Billable */}
                   <TableCell>
                     <span className={`text-xs font-medium ${p.isBillable ? "text-emerald-600" : "text-muted-foreground"}`}>
                       {p.isBillable ? "Billable" : "Non-billable"}
                     </span>
                   </TableCell>
 
+                  {/* Budget */}
                   <TableCell>
                     <span className="text-sm text-muted-foreground font-mono">{p.budgetLabel}</span>
                   </TableCell>
 
+                  {/* Start Date */}
                   <TableCell>
                     <span className={`text-sm ${notStarted ? "text-orange-600 font-medium" : "text-muted-foreground"}`}>
                       {formatDate(p.startDate)}
                     </span>
                   </TableCell>
 
+                  {/* End Date */}
                   <TableCell>
                     <span className="text-sm text-muted-foreground">{formatDate(p.endDate)}</span>
                   </TableCell>
 
+                  {/* Created At */}
                   <TableCell>
                     <span className="text-sm text-muted-foreground">{formatDate(p.createdAt)}</span>
                   </TableCell>
 
+                  {/* Actions */}
                   <TableCell onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={readOnly}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          disabled={readOnly}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        {!p.archived ? (
+                        {/* ─ Archived check sekarang dari is_archived, bukan lifecycle_status ─ */}
+                        {!p.isArchived ? (
                           <>
                             <DropdownMenuItem onSelect={() => onEdit(p, "general")}>Edit project</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onEdit(p, "members")}>Manage members</DropdownMenuItem>
@@ -303,7 +385,12 @@ export function ProjectsTable(props: TableProjectsProps) {
                             <DropdownMenuItem onSelect={() => onArchive(p.id)}>Archive project</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onTransfer(p)}>Transfer</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDelete(p)}>Delete project</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => onDelete(p)}
+                            >
+                              Delete project
+                            </DropdownMenuItem>
                           </>
                         ) : (
                           <>
@@ -311,7 +398,12 @@ export function ProjectsTable(props: TableProjectsProps) {
                             <DropdownMenuItem onSelect={() => onEdit(p, "members")}>Manage members</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => onRestore(p.id)}>Restore project</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDelete(p)}>Delete project</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => onDelete(p)}
+                            >
+                              Delete project
+                            </DropdownMenuItem>
                           </>
                         )}
                       </DropdownMenuContent>
