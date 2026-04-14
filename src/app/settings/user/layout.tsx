@@ -14,22 +14,22 @@ import {
 const sidebarNavItems = [
     {
         title: "Profile Settings",
-        href: "/account/settings", // Default active
+        href: "/settings/user", // Default active
         icon: <User className="h-4 w-4" />,
     },
     {
         title: "Account Settings",
-        href: "/account/settings/account",
+        href: "/settings/user/account",
         icon: <Settings className="h-4 w-4" />,
     },
     {
         title: "Billing",
-        href: "/account/settings/billing",
+        href: "/settings/user/billing",
         icon: <CreditCard className="h-4 w-4" />,
     },
     {
         title: "Appearance",
-        href: "/account/settings/appearance",
+        href: "/settings/user/appearance",
         icon: <Settings className="h-4 w-4" />,
     },
 ]
