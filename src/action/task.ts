@@ -205,3 +205,34 @@ export const removeTaskMember = async (taskId: number, memberId: number) => {
 
     return { success: true };
 };
+/**
+ * Synchronize task assignees (batch add/remove)
+ */
+export const syncTaskAssignees = async (taskId: number, memberIds: number[]) => {
+    const supabase = await getSupabase();
+
+    // 1. Remove existing assignees
+    const { error: deleteError } = await supabase
+        .from("task_assignees")
+        .delete()
+        .eq("task_id", taskId);
+
+    if (deleteError) {
+        console.error("syncTaskAssignees delete error:", deleteError);
+        return { success: false, message: deleteError.message };
+    }
+
+    if (memberIds.length === 0) return { success: true };
+
+    // 2. Insert new assignees
+    const { error: insertError } = await supabase
+        .from("task_assignees")
+        .insert(memberIds.map(id => ({ task_id: taskId, organization_member_id: id })));
+
+    if (insertError) {
+        console.error("syncTaskAssignees insert error:", insertError);
+        return { success: false, message: insertError.message };
+    }
+
+    return { success: true };
+};

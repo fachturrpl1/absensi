@@ -338,7 +338,7 @@ export default function PositionsPage() {
                     <div className="relative overflow-x-auto">
                         <Table>
                             <TableHeader>
-                                <TableRow className="border-b border-border">
+                                <TableRow>
                                     <TableHead className="font-medium text-xs uppercase tracking-wide py-3">Code</TableHead>
                                     <TableHead className="font-medium text-xs uppercase tracking-wide">Position Name</TableHead>
                                     <TableHead className="font-medium text-xs uppercase tracking-wide hidden md:table-cell">Description</TableHead>

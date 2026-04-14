@@ -15,15 +15,11 @@ import {
     SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import {
-    DropdownMenu, DropdownMenuContent,
-    DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     Dialog, DialogContent, DialogFooter,
     DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { PaginationFooter } from "@/components/customs/pagination-footer"
-import { updateTask, deleteTask, assignTaskMember } from "@/action/task"
+import { updateTask, deleteTask } from "@/action/task"
 import { toast } from "sonner"
 import { ITask } from "@/interface"
 import { cn } from "@/lib/utils"
@@ -31,11 +27,12 @@ import { TaskNode } from "@/types/tasks"
 import { useOrgDateFormat } from "@/hooks/organization/settings/use-org-date-format"
 import { buildTaskTree, flattenTree, StackedAssignees, PriorityBadge } from "@/components/project-management/tasks/header"
 import { useTasksContext } from "../layout"
-import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
+import ManageTaskDialog from "@/components/project-management/tasks/list/dialogs"
+import { TaskBatchActions } from "@/components/project-management/tasks/list/task-batch-actions"
 
 export default function ListPage() {
     const {
-        tasks, members, taskStatuses,
+        tasks, members, taskStatuses, teams,
         isLoading, activeTab,
         setTasks, projectId, refreshTasks,
     } = useTasksContext()
@@ -73,7 +70,6 @@ export default function ListPage() {
             } else {
                 if (isArchived) return false
                 if (activeTab === "active" && isDone) return false
-                if (activeTab === "completed" && !isDone) return false
             }
 
             if (selectedAssignee !== "all") {
@@ -118,16 +114,10 @@ export default function ListPage() {
 
     const handleUpdate = async (fd: FormData) => {
         if (!editingTask) return
-        const taskId = editingTask.id
-        const assigneeId = fd.get("assignee_id")
-        fd.delete("assignee_id")
-
         const res = await updateTask(fd)
         if (res.success) {
-            if (assigneeId && assigneeId !== "none") {
-                await assignTaskMember(taskId, Number(assigneeId))
-            }
             await refreshTasks()
+            setEditingTask(null)
             toast.success("Task updated")
         } else {
             toast.error(res.message || "Failed to update task")
@@ -151,24 +141,6 @@ export default function ListPage() {
         }
     }
 
-    const handleBatchAction = async () => {
-        const newCode = activeTab === "active" ? "done" : "todo"
-        const statusToApply = taskStatuses.find(s => s.code === newCode)
-        if (!statusToApply) return
-        const snapshot = tasks
-
-        setTasks(prev => prev.map(t => selectedIds.includes(t.id.toString()) ? { ...t, status_id: statusToApply.id, task_status: statusToApply } : t))
-        setRowSelection({})
-        toast.success("Tasks updated")
-
-        const results = await Promise.all(
-            selectedIds.map(id => { const fd = new FormData(); fd.append("id", id); fd.append("status_id", statusToApply.id.toString()); return updateTask(fd) })
-        )
-        if (results.some(r => !r.success)) {
-            setTasks(snapshot) // rollback
-            toast.error("Some tasks failed to update")
-        }
-    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -192,19 +164,15 @@ export default function ListPage() {
                     </SelectContent>
                 </Select>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" disabled={selectedIds.length === 0}>
-                            Batch actions
-                            {selectedIds.length > 0 && <span className="ml-2 rounded-full bg-primary text-primary-foreground text-xs px-1.5">{selectedIds.length}</span>}
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={handleBatchAction}>
-                            {activeTab === "active" ? "Mark as completed" : "Reopen tasks"}
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <TaskBatchActions 
+                    selectedIds={selectedIds}
+                    activeTab={activeTab}
+                    tasks={tasks}
+                    taskStatuses={taskStatuses}
+                    setTasks={setTasks}
+                    onActionComplete={() => setRowSelection({})}
+                    refreshTasks={refreshTasks}
+                />
             </div>
 
             {/* Table */}
@@ -319,6 +287,7 @@ export default function ListPage() {
                 task={editingTask}
                 members={members}
                 taskStatuses={taskStatuses}
+                teams={teams}
                 onSave={handleUpdate}
             />
 

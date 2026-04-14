@@ -316,7 +316,7 @@ export function TasksPageHeader({
 
             {/* Tabs */}
             <div className="flex items-center gap-6 text-sm border-b">
-                {(["active", "completed", "all"] as ActiveTab[]).map(tab => (
+                {(["active", "archived", "all"] as ActiveTab[]).map(tab => (
                     <button
                         key={tab}
                         onClick={() => onTabChange(tab)}

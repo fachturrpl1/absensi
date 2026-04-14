@@ -4,7 +4,7 @@ import { ITask, IProject, IOrganization_member, ITaskStatus } from "@/interface"
 // ─── View & Tab ───────────────────────────────────────────────────────────────
 
 export type CurrentView = "list" | "board" | "timeline"
-export type ActiveTab = "active" | "completed" | "archived" | "all"
+export type ActiveTab = "active" | "archived" | "all"
 
 // ─── Task Tree ────────────────────────────────────────────────────────────────
 
@@ -14,7 +14,6 @@ export type TaskNode = ITask & { children: TaskNode[] }
 
 export interface TabCounts {
     active: number
-    completed: number
     archived: number
     all: number
 }

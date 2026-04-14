@@ -27,6 +27,11 @@ const sidebarNavItems = [
         href: "/account/settings/billing",
         icon: <CreditCard className="h-4 w-4" />,
     },
+    {
+        title: "Appearance",
+        href: "/account/settings/appearance",
+        icon: <Settings className="h-4 w-4" />,
+    },
 ]
 
 interface SettingsLayoutProps {

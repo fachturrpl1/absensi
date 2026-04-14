@@ -14,11 +14,11 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Plus, List, LayoutGrid, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { ITask, IOrganization_member, ITaskStatus } from "@/interface"
+import { ITask, IOrganization_member, ITaskStatus, ITeams } from "@/interface"
 import { getTasksListPageData } from "@/action/projects/tasks/list"
-import { createTask, getTasks, assignTaskMember } from "@/action/task"
+import { createTask, getTasks, syncTaskAssignees } from "@/action/task"
 import { toast } from "sonner"
-import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
+import ManageTaskDialog from "@/components/project-management/tasks/list/dialogs"
 import { ActiveTab, CurrentView, TabCounts } from "@/types/tasks"
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ interface TasksContextType {
     tasks: ITask[]
     members: IOrganization_member[]
     taskStatuses: ITaskStatus[]
+    teams: ITeams[]
     isLoading: boolean
     activeTab: ActiveTab
     setActiveTab: (tab: ActiveTab) => void
@@ -90,7 +91,7 @@ function TasksViewSwitcher({
 
 function LayoutHeader({
     projectId, currentView, activeTab, onTabChange,
-    tabCounts, members, taskStatuses, onCreateTask,
+    tabCounts, members, taskStatuses, teams, onCreateTask,
 }: {
     projectId: string
     currentView: CurrentView
@@ -99,6 +100,7 @@ function LayoutHeader({
     tabCounts: TabCounts
     members: IOrganization_member[]
     taskStatuses: ITaskStatus[]
+    teams: ITeams[]
     onCreateTask: (fd: FormData) => Promise<void>
 }) {
     const [open, setOpen] = useState(false)
@@ -116,7 +118,7 @@ function LayoutHeader({
 
             {/* Tabs — shared across list / kanban / timeline */}
             <div className="flex items-center gap-6 text-sm border-b">
-                {(["active", "completed", "archived", "all"] as ActiveTab[]).map(tab => (
+                {(["active", "archived", "all"] as ActiveTab[]).map(tab => (
                     <button
                         key={tab}
                         onClick={() => onTabChange(tab)}
@@ -139,6 +141,7 @@ function LayoutHeader({
                 task={null}
                 members={members}
                 taskStatuses={taskStatuses}
+                teams={teams}
                 onSave={onCreateTask}
             />
         </>
@@ -168,6 +171,7 @@ export default function TasksLayout({
     const [tasks, setTasks] = useState<ITask[]>([])
     const [members, setMembers] = useState<IOrganization_member[]>([])
     const [taskStatuses, setTaskStatuses] = useState<ITaskStatus[]>([])
+    const [teams, setTeams] = useState<ITeams[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     // ── Shared UI state ────────────────────────────────────────────────────────
@@ -177,10 +181,11 @@ export default function TasksLayout({
     useEffect(() => {
         setIsLoading(true)
         getTasksListPageData(projectId)
-            .then(({ tasks, members, taskStatuses }) => {
+            .then(({ tasks, members, taskStatuses, teams }) => {
                 setTasks(tasks)
                 setMembers(members)
                 setTaskStatuses(taskStatuses)
+                setTeams(teams)
             })
             .finally(() => setIsLoading(false))
     }, [projectId])
@@ -193,13 +198,11 @@ export default function TasksLayout({
 
     // ── Derived tab counts ─────────────────────────────────────────────────────
     const tabCounts: TabCounts = useMemo(() => {
-        const counts = { all: 0, active: 0, completed: 0, archived: 0 }
+        const counts = { all: 0, active: 0, archived: 0 }
         tasks.forEach(t => {
             counts.all++
             if (t.is_archived) {
                 counts.archived++
-            } else if (t.task_status?.code === "done") {
-                counts.completed++
             } else {
                 counts.active++
             }
@@ -210,13 +213,15 @@ export default function TasksLayout({
     // ── handleCreateTask — setelah create, server sync (id tidak diketahui) ────
     const handleCreateTask = useCallback(async (fd: FormData) => {
         fd.append("project_id", projectId)
-        const assigneeId = fd.get("assignee_id")
-        fd.delete("assignee_id")
+        
+        const assigneeIdsJson = fd.get("assignee_ids") as string
+        fd.delete("assignee_ids")
+        const assigneeIds: number[] = assigneeIdsJson ? JSON.parse(assigneeIdsJson) : []
 
         const res = await createTask(fd)
         if (res.success && res.data) {
-            if (assigneeId && assigneeId !== "none") {
-                await assignTaskMember(res.data.id, Number(assigneeId))
+            if (assigneeIds.length > 0) {
+                await syncTaskAssignees(res.data.id, assigneeIds)
             }
             await refreshTasks()
             toast.success("Task created")
@@ -227,7 +232,7 @@ export default function TasksLayout({
 
     return (
         <TasksContext.Provider value={{
-            tasks, members, taskStatuses, isLoading,
+            tasks, members, taskStatuses, teams, isLoading,
             activeTab, setActiveTab, setTasks, refreshTasks, projectId,
         }}>
             <div className="flex flex-col gap-6">
@@ -239,6 +244,7 @@ export default function TasksLayout({
                     tabCounts={tabCounts}
                     members={members}
                     taskStatuses={taskStatuses}
+                    teams={teams}
                     onCreateTask={handleCreateTask}
                 />
                 <main>{children}</main>

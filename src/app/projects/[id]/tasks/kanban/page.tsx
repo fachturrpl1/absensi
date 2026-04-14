@@ -4,13 +4,13 @@ import { useMemo, useState } from "react"
 import { ITask } from "@/interface"
 import { useTasksContext } from "../layout"
 import { StackedAssignees, PriorityBadge } from "@/components/project-management/tasks/header"
-import ManageTaskDialog from "@/components/project-management/tasks/dialogs/manage-task-dialog"
-import { updateTask, assignTaskMember } from "@/action/task"
+import ManageTaskDialog from "@/components/project-management/tasks/list/dialogs"
+import { updateTask } from "@/action/task"
 import { toast } from "sonner"
 
 export default function KanbanPage() {
     const {
-        tasks, members, taskStatuses,
+        tasks, members, taskStatuses, teams,
         isLoading, activeTab,
         refreshTasks
     } = useTasksContext()
@@ -27,7 +27,6 @@ export default function KanbanPage() {
             } else {
                 if (isArchived) return false
                 if (activeTab === "active" && isDone) return false
-                if (activeTab === "completed" && !isDone) return false
             }
             return true
         })
@@ -47,16 +46,10 @@ export default function KanbanPage() {
 
     const handleUpdate = async (fd: FormData) => {
         if (!editingTask) return
-        const taskId = editingTask.id
-        const assigneeId = fd.get("assignee_id")
-        fd.delete("assignee_id")
-
         const res = await updateTask(fd)
         if (res.success) {
-            if (assigneeId && assigneeId !== "none") {
-                await assignTaskMember(taskId, Number(assigneeId))
-            }
             await refreshTasks()
+            setEditingTask(null)
             toast.success("Task updated")
         } else {
             toast.error(res.message || "Failed to update task")
@@ -109,6 +102,7 @@ export default function KanbanPage() {
                 task={editingTask}
                 members={members}
                 taskStatuses={taskStatuses}
+                teams={teams}
                 onSave={handleUpdate}
             />
         </div>

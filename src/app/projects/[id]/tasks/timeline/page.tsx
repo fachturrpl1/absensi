@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button"
 import { UserAvatar } from "@/components/profile&image/user-avatar"
 import Link from "next/link"
 import { useTasksContext } from "../layout"
+import { updateTask } from "@/action/task"
+import ManageTaskDialog from "@/components/project-management/tasks/list/dialogs"
+import { toast } from "sonner"
 
 type GroupBy = "task" | "assignee"
 
@@ -50,7 +53,9 @@ function AssigneeAvatarItem({ name, photoUrl, userId, size = 6, memberId }: { na
 }
 
 export default function TimelinePage() {
-    const { tasks, isLoading, activeTab, projectId } = useTasksContext()
+    const { tasks, members, taskStatuses, teams, isLoading, activeTab, projectId, refreshTasks } = useTasksContext()
+
+    const [editingTask, setEditingTask] = useState<ITask | null>(null)
 
     const [groupBy, setGroupBy] = useState<GroupBy>("task")
     const [expandedTaskIds, setExpandedTaskIds] = useState<Set<number>>(new Set())
@@ -73,7 +78,6 @@ export default function TimelinePage() {
         return tasks.filter(t => {
             const isDone = t.task_status?.code === "done"
             if (activeTab === "active" && isDone) return false
-            if (activeTab === "completed" && !isDone) return false
             return true
         })
     }, [tasks, projectId, activeTab])
@@ -85,6 +89,18 @@ export default function TimelinePage() {
     }, [])
     const expandAll = useCallback(() => setExpandedTaskIds(new Set(filteredTasks.filter(t => !t.parent_task_id).map(t => t.id))), [filteredTasks])
     const collapseAll = useCallback(() => setExpandedTaskIds(new Set()), [])
+
+    const handleUpdate = async (fd: FormData) => {
+        if (!editingTask) return
+        const res = await updateTask(fd)
+        if (res.success) {
+            await refreshTasks()
+            setEditingTask(null)
+            toast.success("Task updated")
+        } else {
+            toast.error(res.message || "Failed to update task")
+        }
+    }
 
     const taskViewRows = useMemo(() => flattenTree(taskTree, expandedTaskIds), [taskTree, expandedTaskIds])
 
@@ -202,8 +218,11 @@ export default function TimelinePage() {
                             </div>
                             {renderDayCells(rowIndex, true, OFFSET)}
                             {barCols && (
-                                <div className="flex items-center px-0.5 z-10 pointer-events-none py-1.5" style={{ gridRow: rowIndex + 2, gridColumn: `${barCols.startCol} / ${barCols.endCol}` }}>
-                                    <div className={`w-full rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white ${STATUS_COLORS[node.task_status?.code || "todo"]} ${depth > 0 ? "h-5 opacity-80" : "h-7"}`}>
+                                <div className="flex items-center px-0.5 z-10 py-1.5" style={{ gridRow: rowIndex + 2, gridColumn: `${barCols.startCol} / ${barCols.endCol}` }}>
+                                    <div 
+                                        className={`w-full rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white cursor-pointer ${STATUS_COLORS[node.task_status?.code || "todo"]} ${depth > 0 ? "h-5 opacity-80" : "h-7"}`}
+                                        onClick={() => setEditingTask(node as any)}
+                                    >
                                         <span className="truncate">{node.name}</span>
                                     </div>
                                 </div>
@@ -247,7 +266,10 @@ export default function TimelinePage() {
                             ))}
                             {barCols && (
                                 <div className="flex items-center px-0.5 z-10 pointer-events-none py-2" style={{ gridRow: rowIndex + 2, gridColumn: `${barCols.startCol} / ${barCols.endCol}` }}>
-                                    <div className={`w-full h-6 rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white ${STATUS_COLORS[task.task_status?.code || "todo"]}`}>
+                                    <div 
+                                        className={`w-full h-6 rounded-md px-2 flex items-center shadow-sm text-[10px] font-medium text-white cursor-pointer ${STATUS_COLORS[task.task_status?.code || "todo"]}`}
+                                        onClick={() => setEditingTask(task)}
+                                    >
                                         <span className="truncate">{task.name}</span>
                                     </div>
                                 </div>
@@ -286,6 +308,16 @@ export default function TimelinePage() {
                         </div>
                     </div>
                 </div>
+                <ManageTaskDialog
+                    mode="edit"
+                    open={!!editingTask}
+                    onOpenChange={v => !v && setEditingTask(null)}
+                    task={editingTask}
+                    members={members}
+                    taskStatuses={taskStatuses}
+                    teams={teams}
+                    onSave={handleUpdate}
+                />
             </CardContent>
         </Card>
     )

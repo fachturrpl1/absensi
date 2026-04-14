@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, memo } from 'react';
-import { EllipsisVertical, CircleUser, LogOut } from 'lucide-react';
+import { EllipsisVertical, CircleUser, LogOut, Settings } from 'lucide-react';
 import { UserAvatar } from '@/components/profile&image/user-avatar';
 import {
   DropdownMenu,
@@ -155,15 +155,23 @@ export const NavUser = memo(function NavUser() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="hover:cursor-pointer">
                 <Link href="/account">
                   <CircleUser />
                   Account
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild className="hover:cursor-pointer">
+                <Link href="/account/settings">
+                  <Settings className="size-4" />
+                  <span>User Settings</span>
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} disabled={isLoggingOut}>
+            <DropdownMenuItem onClick={handleLogout} className="hover:cursor-pointer" disabled={isLoggingOut}>
               <LogOut />
               {isLoggingOut ? 'Logging out...' : 'Log out'}
             </DropdownMenuItem>
