@@ -164,7 +164,7 @@ export const NavUser = memo(function NavUser() {
             </DropdownMenuGroup>
             <DropdownMenuGroup>
               <DropdownMenuItem asChild className="hover:cursor-pointer">
-                <Link href="/settings/user">
+                <Link href="user/settings">
                   <Settings className="size-4" />
                   <span>User Settings</span>
                 </Link>
