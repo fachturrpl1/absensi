@@ -2,13 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { 
-  Plus, 
   Trash2, 
   Users,
   ChevronDown,
   Pencil
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,7 +26,6 @@ import {
 import { toast } from "sonner";
 import { 
   getCustomFieldDefinitions, 
-  updateCustomFieldDefinitions, 
   ICustomFieldDefinition 
 } from "@/action/custom-fields";
 import { getUserOrganization } from "@/action/organization";
@@ -35,10 +33,8 @@ import { SettingsHeader, SettingTab, SettingsContentLayout } from "@/components/
 import type { SidebarItem } from "@/components/settings/SettingsSidebar";
 
 export default function CustomFieldsSettingsPage() {
-  const router = useRouter();
   const [fields, setFields] = useState<ICustomFieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [orgId, setOrgId] = useState<string | number | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -72,28 +68,7 @@ export default function CustomFieldsSettingsPage() {
     setFields(fields.map(f => f.id === id ? { ...f, ...updates } : f));
   };
 
-  const handleSave = async () => {
-    if (!orgId) return;
-    
-    if (fields.some(f => !f.label.trim())) {
-      toast.error("Please provide labels for all fields");
-      return;
-    }
 
-    setSaving(true);
-    try {
-      const res = await updateCustomFieldDefinitions(orgId, fields);
-      if (res.success) {
-        toast.success("Custom fields saved successfully");
-      } else {
-        toast.error(res.message || "Failed to save fields");
-      }
-    } catch (err) {
-      toast.error("An unexpected error occurred");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const tabs: SettingTab[] = [
     { label: "EMAIL NOTIFICATIONS", href: "/settings/members/email-notifications", active: false },

@@ -1,4 +1,4 @@
-import { createAdminClient } from "./src/utils/supabase/admin";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 async function checkColumns() {
   const admin = createAdminClient();

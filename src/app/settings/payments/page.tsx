@@ -250,7 +250,7 @@ export default function PaymentsPage() {
                     onClick={handleSave}
                     className="w-full sm:w-auto h-11 px-10 rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200 transition-all"
                   >
-                    Save Changes
+                    Save
                   </Button>
                 </div>
               </div>
