@@ -11,7 +11,7 @@ import OrganizationStatusChecker from "@/components/organization/organization-st
 import AccountStatusChecker from "@/components/organization/account-status-checker";
 import { PermissionInitializer } from "@/components/auth/permission-initializer";
 import { ToastProvider } from "@/components/notifications/toast-system";
-import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
+import { LayoutWrapper } from "@/components/layout/layout-wrapper";
 import "leaflet/dist/leaflet.css"
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -159,9 +159,9 @@ export default async function RootLayout({
                 <ToastProvider>
                   <OrganizationStatusChecker>
                     <AccountStatusChecker>
-                      <DashboardLayoutWrapper>
+                      <LayoutWrapper>
                         {children}
-                      </DashboardLayoutWrapper>
+                      </LayoutWrapper>
                     </AccountStatusChecker>
                   </OrganizationStatusChecker>
                 </ToastProvider>

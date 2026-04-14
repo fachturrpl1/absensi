@@ -21,7 +21,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toast } from "sonner"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 
@@ -64,9 +63,6 @@ export function AppearanceForm() {
 
     function onSubmit(data: AppearanceFormValues) {
         setTheme(data.theme)
-        toast.success("Preferences updated", {
-            description: "Your appearance settings have been saved."
-        })
     }
 
     if (!mounted) {

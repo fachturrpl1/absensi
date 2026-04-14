@@ -18,7 +18,7 @@ export function UserSettingsSidebar({ className, items, ...props }: SidebarNavPr
     return (
         <nav
             className={cn(
-                "flex space-x-2 overflow-x-auto pb-2 scrollbar-hide md:flex-col md:space-x-0 md:space-y-1 md:pb-0",
+                "flex space-x-2 overflow-x-auto pb-2 scrollbar-hide md:flex-col md:space-x-0",
                 className
             )}
             {...props}
@@ -28,10 +28,10 @@ export function UserSettingsSidebar({ className, items, ...props }: SidebarNavPr
                     key={item.href}
                     href={item.href}
                     className={cn(
-                        "flex items-center gap-2 justify-start px-3 py-2 rounded-md text-sm font-normal transition-colors no-underline",
+                        "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors no-underline",
                         pathname === item.href
-                            ? "bg-slate-100 text-slate-900"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            ? "bg-accent text-accent-foreground"
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     )}
                 >
                     {item.icon}

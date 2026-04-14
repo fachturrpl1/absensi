@@ -1,11 +1,11 @@
 "use client";
 
-import { DashboardLayoutWrapper } from "@/components/layout/dashboard-layout-wrapper";
+import { LayoutWrapper } from "@/components/layout/layout-wrapper";
 
 export default function AdminPanelLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>;
+  return <LayoutWrapper>{children}</LayoutWrapper>;
 }
